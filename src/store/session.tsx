@@ -83,8 +83,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   )
 }
 
+const fallbackSession: SessionContextType = {
+  user: null,
+  token: null,
+  isAuthenticated: false,
+  hydrated: false,
+  login: () => {},
+  logout: () => {},
+}
+
 export const useSession = () => {
   const ctx = useContext(SessionContext)
-  if (!ctx) throw new Error('useSession must be used within SessionProvider')
-  return ctx
+  return ctx ?? fallbackSession
 }

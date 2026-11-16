@@ -22,8 +22,5 @@ export const socketHandlers = [
     connection.client.addEventListener('close', () => {
       clients.delete(io)
     })
-    io.on('disconnect', () => {
-      clients.delete(io)
-    })
   }),
 ]
