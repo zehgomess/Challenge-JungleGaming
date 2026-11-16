@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { connectSocket, disconnectSocket } from '@/lib/socket'
+import { connectSocket, disconnectSocket, recordSocketEvent } from '@/lib/socket'
 import { useSession } from '@/store/session'
 
 export function SocketManager() {
@@ -36,6 +36,7 @@ export function SocketManager() {
 
     const onNftUpdated = (payload: any) => {
       if (!payload?.id) return
+      recordSocketEvent('nft.updated')
       const entityKey = `nft:${payload.id}`
       if (!isNewer(entityKey, payload?.version, payload?.updated_at)) return
       qc.invalidateQueries({ queryKey: ['nft', payload.id] })
@@ -49,6 +50,7 @@ export function SocketManager() {
     const onOrderUpdated = (payload: any) => {
       const id = payload?.orderId || payload?.id
       if (!id) return
+      recordSocketEvent('order.updated')
       const entityKey = `order:${id}`
       if (!isNewer(entityKey, payload?.version, payload?.updated_at)) return
       qc.invalidateQueries({ queryKey: ['order', id] })

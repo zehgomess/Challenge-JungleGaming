@@ -1,6 +1,6 @@
 import { http, HttpResponse, delay } from 'msw'
 import type { NFT, NFTListResponse, User, Order } from '@/types'
-import { emitToAll, getSocketClientCount } from './socket'
+import { emitToAll, getSocketBroadcastDiagnostics, getSocketClientCount } from './socket'
 
 const editions = ['Standard', 'Gold', 'Platinum'] as const
 
@@ -433,6 +433,7 @@ export const handlers = [
       testControls: { ...testControls },
       connectedClients: getSocketClientCount(),
       socketClient: getSocketDiagnostics(),
+      lastBroadcast: getSocketBroadcastDiagnostics(),
     })
   }),
   http.post('/api/__test/nft-update', async ({ request }) => {

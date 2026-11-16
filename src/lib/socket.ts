@@ -2,6 +2,11 @@ import { io, Socket } from 'socket.io-client'
 
 let socket: Socket | null = null
 let lastConnectError: string | null = null
+const receivedEvents: Record<string, number> = {}
+
+export function recordSocketEvent(event: string) {
+  receivedEvents[event] = (receivedEvents[event] ?? 0) + 1
+}
 
 export function getSocket() {
   if (!socket) {
@@ -26,6 +31,7 @@ export function getSocketDiagnostics() {
     connected: current?.connected ?? false,
     transport: current?.io.engine?.transport?.name ?? null,
     lastConnectError,
+    receivedEvents: { ...receivedEvents },
   }
 }
 
