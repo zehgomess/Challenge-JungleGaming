@@ -5,6 +5,7 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
 import { enableMocking } from './mocks/browser'
 import { SessionProvider } from './store/session'
+import { CartProvider } from './store/cart'
 
 const router = createRouter({ routeTree })
 
@@ -19,7 +20,9 @@ async function bootstrap() {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <SessionProvider>
-        <RouterProvider router={router} />
+        <CartProvider>
+          <RouterProvider router={router} />
+        </CartProvider>
       </SessionProvider>
     </StrictMode>,
   )

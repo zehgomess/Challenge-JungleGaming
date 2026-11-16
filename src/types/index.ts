@@ -43,6 +43,20 @@ export interface CartItem {
   edition: string
   quantity: number
   price_at_add: string
+  name?: string
+  image?: string
+  max_availability?: number
+}
+
+export interface CartQuote {
+  items: Array<CartItem & { unit_price: string; line_total: string; available: number }>
+  subtotal: string
+  discount: string
+  network_fee: string
+  total: string
+  coupon_code?: string
+  coupon_valid?: boolean
+  coupon_error?: string
 }
 
 export interface Order {

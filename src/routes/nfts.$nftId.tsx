@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useSession } from '@/store/session'
+import { useCart } from '@/store/cart'
 import { toast } from 'sonner'
 
 export const Route = createFileRoute('/nfts/$nftId')({
@@ -17,6 +18,7 @@ function NftDetail() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const { isAuthenticated } = useSession()
+  const { addItem } = useCart()
 
   const query = useQuery({
     queryKey: ['nft', nftId],
@@ -131,7 +133,22 @@ function NftDetail() {
           </Card>
 
           <div className="flex gap-3">
-            <Button disabled={unavailable} className="flex-1">
+            <Button
+              disabled={unavailable}
+              className="flex-1"
+              onClick={() => {
+                addItem({
+                  nft_id: nft.id,
+                  edition: nft.edition,
+                  quantity: 1,
+                  price_at_add: nft.price,
+                  name: nft.name,
+                  image: nft.image,
+                  max_availability: nft.availability,
+                })
+                toast.success('Item adicionado ao carrinho')
+              }}
+            >
               {unavailable ? 'Edição indisponível' : 'Adicionar ao carrinho'}
             </Button>
             <Button variant="outline" asChild>

@@ -181,6 +181,61 @@ export const handlers = [
     HttpResponse.json({ status: 'confirmed', transaction_hash: '0xmockhash123' }),
   ),
 
+  http.post('/api/cart/quote', async ({ request }) => {
+    const body = (await request.json()) as { items?: Array<{ nft_id: string; edition: string; quantity: number }>; coupon_code?: string }
+    await delay(200)
+    const items = (body.items ?? [])
+      .map((it) => {
+        const nft = NFTS.find((n) => n.id === it.nft_id)
+        if (!nft) return null
+        const available = nft.availability
+        const qty = Math.max(0, Math.min(it.quantity || 0, Math.max(available, 0)))
+        const unit = Number(nft.price)
+        const line = unit * qty
+        return {
+          nft_id: nft.id,
+          edition: nft.edition,
+          quantity: qty,
+          price_at_add: nft.price,
+          name: nft.name,
+          image: nft.image,
+          max_availability: available,
+          unit_price: nft.price,
+          line_total: line.toFixed(2),
+          available,
+        }
+      })
+      .filter(Boolean) as any[]
+
+    const subtotalNum = items.reduce((sum, it) => sum + Number(it.line_total), 0)
+    let discountNum = 0
+    let coupon_valid = false
+    let coupon_error: string | undefined
+    const code = (body.coupon_code || '').trim().toUpperCase()
+    if (code) {
+      if (code === 'JUNGLE20') {
+        discountNum = subtotalNum * 0.2
+        coupon_valid = true
+      } else if (code === 'EXPIRED') {
+        coupon_error = 'Cupom expirado'
+      } else {
+        coupon_error = 'Cupom inválido'
+      }
+    }
+    const networkFeeNum = subtotalNum > 0 ? 0.01 : 0
+    const totalNum = Math.max(0, subtotalNum - discountNum + networkFeeNum)
+    return HttpResponse.json({
+      items,
+      subtotal: subtotalNum.toFixed(2),
+      discount: discountNum.toFixed(2),
+      network_fee: networkFeeNum.toFixed(2),
+      total: totalNum.toFixed(2),
+      coupon_code: code || undefined,
+      coupon_valid: code ? coupon_valid : undefined,
+      coupon_error,
+    })
+  }),
+
   http.post('/api/coupons/validate', async ({ request }) => {
     const body = (await request.json()) as { code: string }
     await delay(200)
