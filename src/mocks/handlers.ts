@@ -385,4 +385,45 @@ export const handlers = [
     walletsByUser.set(userId, list)
     return HttpResponse.json({ success: true, wallet: list[idx] })
   }),
+
+  // Test-control helpers (mock/demo determinism)
+  http.post('/api/__test/nft-update', async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as any
+    const nft = NFTS.find((n) => n.id === body.id)
+    if (!nft) return HttpResponse.json({ ok: false, error: 'not_found' }, { status: 404 })
+    if (typeof body.price === 'string') nft.price = body.price
+    if (typeof body.availability === 'number') nft.availability = body.availability
+    nft.updated_at = body.updated_at || new Date().toISOString()
+    nft.version = typeof body.version === 'number' ? body.version : (nft.version || 1) + 1
+    const payload = {
+      id: nft.id,
+      price: nft.price,
+      availability: nft.availability,
+      updated_at: nft.updated_at,
+      version: nft.version,
+      ...(body.extra || {}),
+    }
+    emitToAll('nft.updated', payload)
+    return HttpResponse.json({ ok: true, payload })
+  }),
+  http.post('/api/__test/order-event', async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as any
+    const payload = {
+      orderId: body.orderId || body.id,
+      status: body.status || 'pending',
+      updated_at: body.updated_at || new Date().toISOString(),
+      ...(typeof body.version === 'number' ? { version: body.version } : {}),
+      ...(body.extra || {}),
+    }
+    if (payload.orderId) {
+      const existing = orders.get(String(payload.orderId))
+      if (existing && body.mutate !== false) {
+        ;(existing as any).status = payload.status
+        ;(existing as any).updated_at = payload.updated_at
+        orders.set(String(payload.orderId), existing)
+      }
+    }
+    emitToAll('order.updated', payload)
+    return HttpResponse.json({ ok: true, payload })
+  }),
 ]
