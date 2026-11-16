@@ -4,10 +4,11 @@ import { emitToAll } from './socket'
 
 const editions = ['Standard', 'Gold', 'Platinum'] as const
 
-const NFTS: NFT[] = Array.from({ length: 24 }).map((_, i) => {
+const NFTS: Array<NFT & { version: number }> = Array.from({ length: 24 }).map((_, i) => {
   const edition = editions[i % editions.length]
   const availability = i % 7 === 0 ? 0 : (i % 5) + 1
   const price = (0.25 + i * 0.13).toFixed(2)
+  const ts = new Date(Date.now() - i * 3600000).toISOString()
   return {
     id: `nft-${i + 1}`,
     name: `Crypto Jungle #${i + 1}`,
@@ -20,7 +21,8 @@ const NFTS: NFT[] = Array.from({ length: 24 }).map((_, i) => {
     creator: `0x${(1000 + i).toString(16)}...abcd`,
     royalties: (i % 10) + 1,
     created_at: new Date(Date.now() - i * 86400000).toISOString(),
-    updated_at: new Date(Date.now() - i * 3600000).toISOString(),
+    updated_at: ts,
+    version: 1,
   }
 })
 
@@ -195,7 +197,14 @@ export const handlers = [
         // simulate availability impact on order creation (pending reservation) and emit update
         nft.availability = Math.max(0, nft.availability - qty)
         nft.updated_at = new Date().toISOString()
-        emitToAll('nft.updated', { id: nft.id, price: nft.price, availability: nft.availability, updated_at: nft.updated_at })
+        nft.version = (nft.version || 1) + 1
+        emitToAll('nft.updated', {
+          id: nft.id,
+          price: nft.price,
+          availability: nft.availability,
+          updated_at: nft.updated_at,
+          version: nft.version,
+        })
         return {
           nft_id: nft.id,
           edition: nft.edition,
