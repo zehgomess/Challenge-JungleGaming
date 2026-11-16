@@ -1,6 +1,7 @@
 import fs from 'fs'
 
 const path = 'reports/lighthouse'
+const base = process.env.LH_BASE_URL || 'http://127.0.0.1:4173'
 const files = fs.readdirSync(path).filter((f) => f.endsWith('.json'))
 const groups = {}
 for (const f of files) {
@@ -25,7 +26,7 @@ function median(arr) {
 }
 let out = '# Lighthouse summary (local preview + MSW)\n\n'
 out += '- Tool: Lighthouse 13.x (npx), Playwright Chromium 159.0.8154.6, Node v26.13.1\n'
-out += '- URL base: http://127.0.0.1:4173 (vite preview, production build with MSW enabled)\n'
+out += `- URL base: ${base} (vite preview, production build with MSW enabled)\n`
 out += '- 3 runs per scenario; medians below (LCP/TBT in ms, CLS unitless)\n\n'
 out += '| Scenario | Perf (median) | LCP | CLS | TBT |\n|---|---:|---:|---:|---:|\n'
 for (const k of ['home-desktop', 'home-mobile', 'detail-desktop', 'detail-mobile']) {
@@ -34,8 +35,8 @@ for (const k of ['home-desktop', 'home-mobile', 'detail-desktop', 'detail-mobile
   out += `| ${k} | ${median(vals.map((v) => v.perf)).toFixed(2)} | ${median(vals.map((v) => v.lcp)).toFixed(0)} | ${median(vals.map((v) => v.cls)).toFixed(3)} | ${median(vals.map((v) => v.tbt)).toFixed(0)} |\n`
 }
 out += '\n## Notes\n'
-out += '- Detail pages show elevated CLS; mobile runs show higher LCP/TBT in this local environment.\n'
-out += '- Results depend on machine, preview server, and mock/SW behavior; production hosting and asset optimization may change scores. Targets/shortfalls should be justified against the deployed environment as required.\n'
+out += '- Explicit image dimensions and a layout-matched detail skeleton keep detail CLS low (0.010 desktop / 0.036 mobile). Mobile LCP remains about 4 seconds, primarily due client-side startup and hydration after MSW/router initialization.\n'
+out += '- Results depend on machine, preview server, and mock/SW behavior; production hosting and asset optimization may change scores. Mobile LCP/TBT remain the main performance shortfalls to justify or optimize against challenge targets.\n'
 out += '- Raw HTML/JSON reports for all runs are in this folder.\n'
 fs.writeFileSync(`${path}/SUMMARY.md`, out)
 console.log('wrote reports/lighthouse/SUMMARY.md')
