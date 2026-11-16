@@ -1,6 +1,6 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5173/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -10,9 +10,9 @@ export const api = axios.create({
   withCredentials: true,
 })
 
-// Request interceptor: attach auth token from sessionStorage
+// Request interceptor: attach auth token
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = sessionStorage.getItem('auth_token')
+  const token = localStorage.getItem('auth_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -24,13 +24,12 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      sessionStorage.removeItem('auth_token')
-      sessionStorage.removeItem('user')
-      // Dispatch custom event for session expiration
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('auth_user')
       window.dispatchEvent(new Event('session-expired'))
     }
     return Promise.reject(error)
-  }
+  },
 )
 
 export type { AxiosError }
