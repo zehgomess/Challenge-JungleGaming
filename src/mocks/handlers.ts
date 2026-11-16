@@ -1,51 +1,27 @@
-import { http, HttpResponse } from 'msw'
-import type { NFT, User, Order } from '@/types'
+import { http, HttpResponse, delay } from 'msw'
+import type { NFT, NFTListResponse, User, Order } from '@/types'
 
-// Mock data
-const MOCK_NFTS: NFT[] = [
-  {
-    id: 'nft-1',
-    name: 'Crypto Jungle #1',
-    description: 'A rare NFT from the Jungle collection',
-    image: 'https://picsum.photos/seed/nft1/400/400',
-    edition: 'Standard',
-    price: '0.5',
-    availability: 10,
+const editions = ['Standard', 'Gold', 'Platinum'] as const
+
+const NFTS: NFT[] = Array.from({ length: 24 }).map((_, i) => {
+  const edition = editions[i % editions.length]
+  const availability = i % 7 === 0 ? 0 : (i % 5) + 1
+  const price = (0.25 + i * 0.13).toFixed(2)
+  return {
+    id: `nft-${i + 1}`,
+    name: `Crypto Jungle #${i + 1}`,
+    description: `Colecionável da série Jungle (${edition}) com raridade e utilidade no ecossistema.`,
+    image: `https://picsum.photos/seed/jungle-${i + 1}/600/600`,
+    edition,
+    price,
+    availability,
     total_supply: 100,
-    creator: '0x1234...',
-    royalties: 5,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'nft-2',
-    name: 'Crypto Jungle #2',
-    description: 'Legendary jungle creature',
-    image: 'https://picsum.photos/seed/nft2/400/400',
-    edition: 'Gold',
-    price: '1.2',
-    availability: 3,
-    total_supply: 50,
-    creator: '0x5678...',
-    royalties: 10,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'nft-3',
-    name: 'Crypto Jungle #3',
-    description: 'Mythic jungle artifact',
-    image: 'https://picsum.photos/seed/nft3/400/400',
-    edition: 'Platinum',
-    price: '2.5',
-    availability: 1,
-    total_supply: 10,
-    creator: '0x9012...',
-    royalties: 15,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-]
+    creator: `0x${(1000 + i).toString(16)}...abcd`,
+    royalties: (i % 10) + 1,
+    created_at: new Date(Date.now() - i * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - i * 3600000).toISOString(),
+  }
+})
 
 const MOCK_USER: User = {
   id: 'user-1',
@@ -55,39 +31,96 @@ const MOCK_USER: User = {
   created_at: new Date().toISOString(),
 }
 
+const favoritesByUser = new Map<string, Set<string>>([['user-1', new Set(['nft-2'])]])
+
+function getUserId(request: Request) {
+  const auth = request.headers.get('authorization') || ''
+  if (auth.includes('mock-token')) return 'user-1'
+  return null
+}
+
+function withFavoriteState(items: NFT[], userId: string | null) {
+  const favs = userId ? favoritesByUser.get(userId) ?? new Set<string>() : new Set<string>()
+  return items.map((n) => ({ ...n, is_favorited: favs.has(n.id) }))
+}
+
 export const handlers = [
-  // NFT catalog
-  http.get('/api/nfts', () => {
-    return HttpResponse.json<NFTListResponse>({
-      items: MOCK_NFTS,
-      total: MOCK_NFTS.length,
-      page: 1,
-      limit: 20,
-      has_more: false,
-    })
-  }),
+  http.get('/api/nfts', async ({ request }) => {
+    const url = new URL(request.url)
+    const search = (url.searchParams.get('search') || '').toLowerCase().trim()
+    const edition = url.searchParams.get('edition')
+    const availability = url.searchParams.get('availability')
+    const sort = url.searchParams.get('sort') || 'recent'
+    const order = url.searchParams.get('order') || 'desc'
+    const page = Math.max(1, Number(url.searchParams.get('page') || '1'))
+    const limit = Math.max(1, Math.min(24, Number(url.searchParams.get('limit') || '8')))
 
-  // NFT detail
-  http.get('/api/nfts/:id', ({ params }) => {
-    const nft = MOCK_NFTS.find((n) => n.id === params.id)
-    if (!nft) {
-      return new HttpResponse(null, { status: 404 })
+    let items = [...NFTS]
+    if (search) {
+      items = items.filter(
+        (n) => n.name.toLowerCase().includes(search) || n.description.toLowerCase().includes(search),
+      )
     }
-    return HttpResponse.json(nft)
+    if (edition) items = items.filter((n) => n.edition === edition)
+    if (availability === 'available') items = items.filter((n) => n.availability > 0)
+    if (availability === 'soldout') items = items.filter((n) => n.availability === 0)
+
+    items.sort((a, b) => {
+      let cmp = 0
+      if (sort === 'price') cmp = Number(a.price) - Number(b.price)
+      else if (sort === 'name') cmp = a.name.localeCompare(b.name)
+      else cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      return order === 'asc' ? cmp : -cmp
+    })
+
+    const total = items.length
+    const start = (page - 1) * limit
+    const paged = items.slice(start, start + limit)
+    const userId = getUserId(request)
+    await delay(250)
+
+    const response: NFTListResponse = {
+      items: withFavoriteState(paged, userId),
+      total,
+      page,
+      limit,
+      has_more: start + limit < total,
+    }
+    return HttpResponse.json(response)
   }),
 
-  // Favorite toggle
-  http.post('/api/nfts/:id/favorite', () => {
+  http.get('/api/nfts/:id', async ({ params, request }) => {
+    await delay(200)
+    const nft = NFTS.find((n) => n.id === params.id)
+    if (!nft) return new HttpResponse(null, { status: 404 })
+    const userId = getUserId(request)
+    const [item] = withFavoriteState([nft], userId)
+    return HttpResponse.json(item)
+  }),
+
+  http.post('/api/nfts/:id/favorite', async ({ params, request }) => {
+    const userId = getUserId(request)
+    if (!userId) return new HttpResponse(null, { status: 401 })
+    const set = favoritesByUser.get(userId) ?? new Set<string>()
+    set.add(String(params.id))
+    favoritesByUser.set(userId, set)
+    await delay(150)
     return HttpResponse.json({ success: true })
   }),
 
-  http.delete('/api/nfts/:id/favorite', () => {
+  http.delete('/api/nfts/:id/favorite', async ({ params, request }) => {
+    const userId = getUserId(request)
+    if (!userId) return new HttpResponse(null, { status: 401 })
+    const set = favoritesByUser.get(userId) ?? new Set<string>()
+    set.delete(String(params.id))
+    favoritesByUser.set(userId, set)
+    await delay(150)
     return HttpResponse.json({ success: true })
   }),
 
-  // Auth
   http.post('/api/auth/login', async ({ request }) => {
     const body = (await request.json()) as { email: string; password: string }
+    await delay(300)
     if (body.email === 'collector@jungle.io' && body.password === 'password123') {
       return HttpResponse.json({ token: 'mock-token-123', user: MOCK_USER })
     }
@@ -96,29 +129,32 @@ export const handlers = [
 
   http.post('/api/auth/register', async ({ request }) => {
     const body = (await request.json()) as { email: string; password: string; name: string }
+    await delay(300)
     if (body.email === 'existing@jungle.io') {
       return new HttpResponse(null, { status: 409 })
     }
-    return HttpResponse.json({ token: 'mock-token-new', user: { ...MOCK_USER, email: body.email, name: body.name } })
+    return HttpResponse.json({
+      token: 'mock-token-new',
+      user: { ...MOCK_USER, id: `user-${Date.now()}`, email: body.email, name: body.name },
+    })
   }),
 
-  http.post('/api/auth/logout', () => {
-    return HttpResponse.json({ success: true })
-  }),
-
-  http.get('/api/auth/me', () => {
+  http.post('/api/auth/logout', () => HttpResponse.json({ success: true })),
+  http.get('/api/auth/me', ({ request }) => {
+    const userId = getUserId(request)
+    if (!userId) return new HttpResponse(null, { status: 401 })
     return HttpResponse.json(MOCK_USER)
   }),
 
-  // Orders
   http.post('/api/orders', async ({ request }) => {
     const body = (await request.json()) as { items: any[] }
+    await delay(300)
     const order: Order = {
       id: `order-${Date.now()}`,
       status: 'pending',
-      items: body.items,
-      subtotal: '1.5',
-      discount: '0',
+      items: body.items ?? [],
+      subtotal: '1.50',
+      discount: '0.00',
       network_fee: '0.01',
       total: '1.51',
       created_at: new Date().toISOString(),
@@ -127,55 +163,32 @@ export const handlers = [
     return HttpResponse.json(order)
   }),
 
-  http.get('/api/orders/:id', () => {
-    return HttpResponse.json({
+  http.get('/api/orders/:id', () =>
+    HttpResponse.json({
       id: 'order-1',
       status: 'confirmed',
       items: [],
-      subtotal: '1.5',
-      discount: '0',
+      subtotal: '1.50',
+      discount: '0.00',
       network_fee: '0.01',
       total: '1.51',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    })
-  }),
+    }),
+  ),
 
-  http.post('/api/orders/:id/confirm', () => {
-    return HttpResponse.json({
-      status: 'confirmed',
-      transaction_hash: '0xmockhash123',
-    })
-  }),
+  http.post('/api/orders/:id/confirm', () =>
+    HttpResponse.json({ status: 'confirmed', transaction_hash: '0xmockhash123' }),
+  ),
 
-  // Coupon validation
   http.post('/api/coupons/validate', async ({ request }) => {
     const body = (await request.json()) as { code: string }
-    if (body.code === 'JUNGLE20') {
-      return HttpResponse.json({ valid: true, discount_percentage: 20 })
-    }
-    if (body.code === 'EXPIRED') {
-      return HttpResponse.json({ valid: false, error: 'Cupom expirado' })
-    }
+    await delay(200)
+    if (body.code === 'JUNGLE20') return HttpResponse.json({ valid: true, discount_percentage: 20 })
+    if (body.code === 'EXPIRED') return HttpResponse.json({ valid: false, error: 'Cupom expirado' })
     return HttpResponse.json({ valid: false, error: 'Cupom inválido' })
   }),
 
-  // Wallets
-  http.get('/api/auth/wallets', () => {
-    return HttpResponse.json({ wallets: [] })
-  }),
-
-  http.post('/api/auth/wallets', () => {
-    return HttpResponse.json({ success: true })
-  }),
+  http.get('/api/auth/wallets', () => HttpResponse.json({ wallets: [] })),
+  http.post('/api/auth/wallets', () => HttpResponse.json({ success: true })),
 ]
-
-export type { NFT, User, Order }
-
-interface NFTListResponse {
-  items: NFT[]
-  total: number
-  page: number
-  limit: number
-  has_more: boolean
-}
