@@ -1,6 +1,11 @@
 import { http, HttpResponse, delay } from 'msw'
 import type { NFT, NFTListResponse, User, Order } from '@/types'
-import { emitToAll, getSocketBroadcastDiagnostics, getSocketClientCount } from './socket'
+import {
+  disconnectSocketClients,
+  emitToAll,
+  getSocketBroadcastDiagnostics,
+  getSocketClientCount,
+} from './socket'
 
 const editions = ['Standard', 'Gold', 'Platinum'] as const
 
@@ -45,6 +50,7 @@ const testControls = {
   auth401: false,
   orderCreateTimeout: 0,
   orderCreateFail: 0,
+  orderConfirmPending: 0,
 }
 
 function getUserId(request: Request) {
@@ -302,6 +308,10 @@ export const handlers = [
       if (existing.status === 'confirmed' || existing.status === 'refused' || (existing as any).status === 'cancelled') {
         return HttpResponse.json(existing)
       }
+      if (testControls.orderConfirmPending > 0) {
+        testControls.orderConfirmPending -= 1
+        return HttpResponse.json(existing)
+      }
       existing.status = 'confirmed'
       existing.transaction_hash = existing.transaction_hash || `0x${id.replace(/[^a-z0-9]/gi, '')}abcd`
       existing.updated_at = new Date().toISOString()
@@ -398,8 +408,11 @@ export const handlers = [
     const userId = getUserId(request)
     if (!userId) return new HttpResponse(null, { status: 401 })
     const body = (await request.json()) as any
+    if (typeof body.address !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(body.address.trim())) {
+      return HttpResponse.json({ message: 'Endereço de carteira inválido' }, { status: 400 })
+    }
     const list = walletsByUser.get(userId) ?? []
-    const wallet = { id: `w-${Date.now()}`, is_primary: false, ...body }
+    const wallet = { id: `w-${Date.now()}`, is_primary: false, ...body, address: body.address.trim() }
     if (wallet.is_primary) {
       for (const w of list) w.is_primary = false
     }
@@ -411,6 +424,9 @@ export const handlers = [
     const userId = getUserId(request)
     if (!userId) return new HttpResponse(null, { status: 401 })
     const body = (await request.json()) as any
+    if (body.address !== undefined && (typeof body.address !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(body.address.trim()))) {
+      return HttpResponse.json({ message: 'Endereço de carteira inválido' }, { status: 400 })
+    }
     const list = walletsByUser.get(userId) ?? []
     const idx = list.findIndex((w) => w.id === params.id)
     if (idx === -1) return new HttpResponse(null, { status: 404 })
@@ -427,6 +443,7 @@ export const handlers = [
     if (typeof body.favoriteFail === 'number') testControls.favoriteFail = body.favoriteFail
     if (typeof body.orderCreateTimeout === 'number') testControls.orderCreateTimeout = body.orderCreateTimeout
     if (typeof body.orderCreateFail === 'number') testControls.orderCreateFail = body.orderCreateFail
+    if (typeof body.orderConfirmPending === 'number') testControls.orderConfirmPending = body.orderConfirmPending
     const { getSocketDiagnostics } = await import('@/lib/socket')
     return HttpResponse.json({
       ok: true,
@@ -435,6 +452,9 @@ export const handlers = [
       socketClient: getSocketDiagnostics(),
       lastBroadcast: getSocketBroadcastDiagnostics(),
     })
+  }),
+  http.post('/api/__test/socket-disconnect', () => {
+    return HttpResponse.json({ ok: true, disconnected: disconnectSocketClients() })
   }),
   http.post('/api/__test/nft-update', async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as any

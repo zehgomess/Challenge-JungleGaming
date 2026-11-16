@@ -86,6 +86,38 @@ test('profile: validation error on password change', async ({ page }) => {
   }
 })
 
+test('profile: validates avatar URL and password confirmation before saving', async ({ page }) => {
+  await login(page)
+  await page.goto('/profile')
+  await expect(page.getByRole('heading', { name: /Perfil do colecionador/i })).toBeVisible()
+
+  await page.getByLabel(/Avatar \(URL\)/i).fill('not-a-url')
+  await page.getByRole('button', { name: /Salvar alterações/i }).click()
+  await expect(page.getByText(/URL inválida/i)).toBeVisible()
+
+  await page.getByLabel(/Avatar \(URL\)/i).fill('https://example.com/avatar.png')
+  await page.getByLabel(/Senha atual/i).fill('password123')
+  await page.getByLabel('Nova senha', { exact: true }).fill('newpassword123')
+  await page.getByLabel(/Confirmar nova senha/i).fill('different123')
+  await page.getByRole('button', { name: /Alterar senha/i }).click()
+  await expect(page.getByText(/Senhas não coincidem/i)).toBeVisible()
+
+  await page.getByLabel(/Confirmar nova senha/i).fill('newpassword123')
+  await page.getByRole('button', { name: /Alterar senha/i }).click()
+  await expect(page.getByText(/Senha alterada com sucesso/i)).toBeVisible({ timeout: 15000 })
+})
+
+test('wallets: reject malformed EVM address with accessible validation feedback', async ({ page }) => {
+  await login(page)
+  await page.goto('/wallets')
+  await expect(page.getByRole('heading', { name: /Carteiras/i })).toBeVisible()
+
+  await page.getByLabel(/Endereço/i).fill('0x1234')
+  await page.getByRole('button', { name: /^Salvar$/i }).click()
+  await expect(page.getByRole('alert')).toContainText(/endereço EVM válido/i)
+  await expect(page.getByLabel(/Endereço/i)).toHaveAttribute('aria-invalid', 'true')
+})
+
 test('forms: keyboard navigation reaches primary actions on login', async ({ page }) => {
   await page.goto('/login')
   await page.getByLabel(/E-mail/i).focus()

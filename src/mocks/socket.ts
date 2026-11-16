@@ -22,6 +22,18 @@ export function getSocketClientCount() {
   return clients.size
 }
 
+export function disconnectSocketClients() {
+  const count = clients.size
+  for (const socket of clients) {
+    try {
+      socket.rawClient.close(4000, 'Simulated Socket.IO disconnect')
+    } catch {
+      // The connection may already be closing.
+    }
+  }
+  return count
+}
+
 export function emitToAll(event: string, payload: any) {
   let sent = 0
   let errors = 0

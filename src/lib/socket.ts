@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client'
 let socket: Socket | null = null
 let lastConnectError: string | null = null
 const receivedEvents: Record<string, number> = {}
+let connectionCount = 0
 
 export function recordSocketEvent(event: string) {
   receivedEvents[event] = (receivedEvents[event] ?? 0) + 1
@@ -16,6 +17,7 @@ export function getSocket() {
       autoConnect: false,
     })
     socket.on('connect', () => {
+      connectionCount += 1
       lastConnectError = null
     })
     socket.on('connect_error', (error) => {
@@ -31,6 +33,7 @@ export function getSocketDiagnostics() {
     connected: current?.connected ?? false,
     transport: current?.io.engine?.transport?.name ?? null,
     lastConnectError,
+    connectionCount,
     receivedEvents: { ...receivedEvents },
   }
 }

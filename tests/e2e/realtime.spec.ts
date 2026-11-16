@@ -20,6 +20,17 @@ async function emitNftUpdate(page: Page, payload: any) {
   )
 }
 
+async function getSocketState(page: Page) {
+  return page.evaluate(async () => {
+    const response = await fetch('/api/__test/control', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    return JSON.parse(await response.text())
+  })
+}
+
 test('socket: MSW has an active Socket.IO client on the current origin', async ({ page }) => {
   const diagnostics: string[] = []
   let socketState = ''
@@ -55,6 +66,79 @@ test('socket: MSW has an active Socket.IO client on the current origin', async (
       `Socket.IO diagnostics: ${socketState}\n${diagnostics.join('\n')}\n${String(error)}`,
     )
   }
+})
+
+test('socket: reconnects after a simulated disconnect and resumes NFT updates', async ({ page }) => {
+  await page.goto('/nfts/nft-2')
+  await expect(page.getByText(/0\.38 ETH/).first()).toBeVisible({ timeout: 15000 })
+  await expect.poll(async () => (await getSocketState(page)).socketClient.connected, {
+    timeout: 15000,
+  }).toBe(true)
+  const initialConnectionCount = (await getSocketState(page)).socketClient.connectionCount as number
+
+  const disconnect = await page.evaluate(async () => {
+    const response = await fetch('/api/__test/socket-disconnect', { method: 'POST' })
+    return response.json()
+  })
+  expect(disconnect.disconnected).toBeGreaterThan(0)
+
+  await expect.poll(
+    async () => (await getSocketState(page)).socketClient.connectionCount as number,
+    { timeout: 20000 },
+  ).toBeGreaterThan(initialConnectionCount)
+
+  await emitNftUpdate(page, { id: 'nft-2', price: '0.66', availability: 2, version: 500 })
+  await expect(page.getByText(/0\.66 ETH/).first()).toBeVisible({ timeout: 15000 })
+  await emitNftUpdate(page, { id: 'nft-2', price: '0.38', availability: 2, version: 501 })
+})
+
+test('orders: pending order is reconciled after Socket.IO reconnect without creating another order', async ({ page }) => {
+  await login(page)
+  await page.goto('/nfts/nft-2')
+  await expect(page.getByRole('button', { name: /Adicionar ao carrinho/i })).toBeVisible({ timeout: 15000 })
+  await page.getByRole('button', { name: /Adicionar ao carrinho/i }).click()
+  await page.goto('/payment')
+  await page.getByRole('button', { name: /Simular/i }).click()
+  await expect(page.getByText(/Carteira conectada/i)).toBeVisible({ timeout: 15000 })
+  await page.getByLabel(/Confirmo que revisei/i).check()
+  await page.evaluate(() =>
+    fetch('/api/__test/control', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ orderConfirmPending: 1 }),
+    }),
+  )
+  await page.getByRole('button', { name: /Confirmar compra/i }).click()
+  await expect(page).toHaveURL(/\/order\/confirmation/, { timeout: 30000 })
+  await expect(page.getByText(/Pendente/i).first()).toBeVisible({ timeout: 15000 })
+  const orderId = new URL(page.url()).searchParams.get('orderId')
+  expect(orderId).toBeTruthy()
+  const initialConnectionCount = (await getSocketState(page)).socketClient.connectionCount as number
+
+  await page.evaluate(() =>
+    fetch('/api/__test/socket-disconnect', { method: 'POST' }),
+  )
+  await page.evaluate(
+    (id) =>
+      fetch('/api/__test/order-event', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          orderId: id,
+          status: 'confirmed',
+          version: 800,
+          updated_at: new Date().toISOString(),
+        }),
+      }),
+    orderId,
+  )
+
+  await expect.poll(
+    async () => (await getSocketState(page)).socketClient.connectionCount as number,
+    { timeout: 20000 },
+  ).toBeGreaterThan(initialConnectionCount)
+  await expect(page.getByText(/Confirmado/i).first()).toBeVisible({ timeout: 15000 })
+  await expect(page.getByText(orderId)).toHaveCount(1)
 })
 
 test('socket: nft price/availability update reflected in cart summary', async ({ page }) => {

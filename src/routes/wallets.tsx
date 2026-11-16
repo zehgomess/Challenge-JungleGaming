@@ -22,6 +22,9 @@ function WalletsPage() {
   const wallets = data?.data.wallets ?? []
   const [form, setForm] = useState({ address: '', network: 'Ethereum', label: '', is_primary: false })
   const [editing, setEditing] = useState<string | null>(null)
+  const [addressError, setAddressError] = useState<string | null>(null)
+
+  const isValidAddress = (address: string) => /^0x[a-fA-F0-9]{40}$/.test(address.trim())
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -52,7 +55,18 @@ function WalletsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
               <Label htmlFor="address">Endereço</Label>
-              <Input id="address" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} placeholder="0x..." />
+              <Input
+                id="address"
+                value={form.address}
+                aria-invalid={!!addressError}
+                aria-describedby={addressError ? 'wallet-address-error' : undefined}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, address: e.target.value }))
+                  if (addressError) setAddressError(null)
+                }}
+                placeholder="0x..."
+              />
+              {addressError && <p id="wallet-address-error" role="alert" className="text-xs text-destructive mt-1">{addressError}</p>}
             </div>
             <div>
               <Label htmlFor="label">Rótulo</Label>
@@ -67,7 +81,19 @@ function WalletsPage() {
           </div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_primary} onChange={(e) => setForm((f) => ({ ...f, is_primary: e.target.checked }))} /> Definir como carteira primária</label>
           <div className="flex gap-2">
-            <Button onClick={() => saveMutation.mutate()} disabled={!form.address || saveMutation.isPending}>{saveMutation.isPending ? 'Salvando...' : 'Salvar'}</Button>
+            <Button
+              onClick={() => {
+                if (!isValidAddress(form.address)) {
+                  setAddressError('Informe um endereço EVM válido (0x seguido de 40 caracteres hexadecimais).')
+                  return
+                }
+                setAddressError(null)
+                saveMutation.mutate()
+              }}
+              disabled={!form.address || saveMutation.isPending}
+            >
+              {saveMutation.isPending ? 'Salvando...' : 'Salvar'}
+            </Button>
             {editing && <Button variant="outline" onClick={() => { setEditing(null); setForm({ address: '', network: 'Ethereum', label: '', is_primary: false }) }}>Cancelar</Button>}
           </div>
         </CardContent>
