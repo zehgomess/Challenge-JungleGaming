@@ -427,10 +427,12 @@ export const handlers = [
     if (typeof body.favoriteFail === 'number') testControls.favoriteFail = body.favoriteFail
     if (typeof body.orderCreateTimeout === 'number') testControls.orderCreateTimeout = body.orderCreateTimeout
     if (typeof body.orderCreateFail === 'number') testControls.orderCreateFail = body.orderCreateFail
+    const { getSocketDiagnostics } = await import('@/lib/socket')
     return HttpResponse.json({
       ok: true,
       testControls: { ...testControls },
       connectedClients: getSocketClientCount(),
+      socketClient: getSocketDiagnostics(),
     })
   }),
   http.post('/api/__test/nft-update', async ({ request }) => {

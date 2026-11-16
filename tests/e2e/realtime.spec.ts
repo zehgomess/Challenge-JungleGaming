@@ -46,10 +46,10 @@ test('socket: MSW has an active Socket.IO client on the current origin', async (
         })
           return response.text()
         })
-        return JSON.parse(socketState).connectedClients as number
+        return JSON.parse(socketState).socketClient.connected as boolean
       },
       { timeout: 15000 },
-    ).toBeGreaterThan(0)
+    ).toBe(true)
   } catch (error) {
     throw new Error(
       `Socket.IO diagnostics: ${socketState}\n${diagnostics.join('\n')}\n${String(error)}`,
