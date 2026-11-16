@@ -10,6 +10,7 @@ import { useMutation } from '@tanstack/react-query'
 import { authApi } from '@/api/auth'
 import { useSession } from '@/store/session'
 import { toast } from 'sonner'
+import { consumeResumePath } from '@/lib/auth'
 
 const loginSchema = z.object({
   email: z.string().email('E-mail inválido'),
@@ -24,14 +25,14 @@ type LoginSearch = {
 
 export const Route = createFileRoute('/login')({
   validateSearch: (search: Record<string, unknown>): LoginSearch => ({
-    returnTo: typeof search.returnTo === 'string' ? search.returnTo : '/',
+    returnTo: typeof search.returnTo === 'string' ? search.returnTo : undefined,
   }),
   component: Login,
 })
 
 function Login() {
   const navigate = useNavigate()
-  const { returnTo = '/' } = Route.useSearch()
+  const { returnTo } = Route.useSearch()
   const { login } = useSession()
 
   const {
@@ -47,7 +48,8 @@ function Login() {
     onSuccess: (data) => {
       login(data.data.token, data.data.user)
       toast.success('Bem-vindo de volta!')
-      navigate({ to: returnTo as any })
+      const destination = returnTo || consumeResumePath() || '/'
+      navigate({ to: destination as any })
     },
     onError: () => {
       toast.error('E-mail ou senha inválidos')

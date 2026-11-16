@@ -45,11 +45,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setUser(stored.user)
     setHydrated(true)
 
-    const handleSessionExpired = () => {
+    const handleSessionExpired = (event: Event) => {
       clearSessionStorage()
       setToken(null)
       setUser(null)
       queryClient.clear()
+      const detail = (event as CustomEvent<{ returnTo?: string }>).detail
+      if (detail?.returnTo && !detail.returnTo.startsWith('/login')) {
+        sessionStorage.setItem('auth_resume_to', detail.returnTo)
+      }
       window.dispatchEvent(new Event('auth-logout'))
     }
 

@@ -14,12 +14,15 @@ declare module '@tanstack/react-router' {
   }
 }
 
-enableMocking()
+async function bootstrap() {
+  await enableMocking()
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <SessionProvider>
+        <RouterProvider router={router} />
+      </SessionProvider>
+    </StrictMode>,
+  )
+}
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <SessionProvider>
-      <RouterProvider router={router} />
-    </SessionProvider>
-  </StrictMode>,
-)
+bootstrap()

@@ -24,9 +24,13 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
+      const resume = `${window.location.pathname}${window.location.search}${window.location.hash}`
+      if (!resume.startsWith('/login') && !resume.startsWith('/register')) {
+        sessionStorage.setItem('auth_resume_to', resume)
+      }
       localStorage.removeItem('auth_token')
       localStorage.removeItem('auth_user')
-      window.dispatchEvent(new Event('session-expired'))
+      window.dispatchEvent(new CustomEvent('session-expired', { detail: { returnTo: resume } }))
     }
     return Promise.reject(error)
   },

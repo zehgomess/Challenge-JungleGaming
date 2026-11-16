@@ -10,6 +10,7 @@ import { useMutation } from '@tanstack/react-query'
 import { authApi } from '@/api/auth'
 import { useSession } from '@/store/session'
 import { toast } from 'sonner'
+import { consumeResumePath } from '@/lib/auth'
 
 const registerSchema = z
   .object({
@@ -29,14 +30,14 @@ type RegisterSearch = { returnTo?: string }
 
 export const Route = createFileRoute('/register')({
   validateSearch: (search: Record<string, unknown>): RegisterSearch => ({
-    returnTo: typeof search.returnTo === 'string' ? search.returnTo : '/',
+    returnTo: typeof search.returnTo === 'string' ? search.returnTo : undefined,
   }),
   component: Register,
 })
 
 function Register() {
   const navigate = useNavigate()
-  const { returnTo = '/' } = Route.useSearch()
+  const { returnTo } = Route.useSearch()
   const { login } = useSession()
 
   const {
@@ -53,7 +54,8 @@ function Register() {
     onSuccess: (data) => {
       login(data.data.token, data.data.user)
       toast.success('Conta criada com sucesso!')
-      navigate({ to: returnTo as any })
+      const destination = returnTo || consumeResumePath() || '/'
+      navigate({ to: destination as any })
     },
     onError: (error: any) => {
       if (error?.response?.status === 409) {
