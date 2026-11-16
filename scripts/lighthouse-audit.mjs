@@ -1,7 +1,8 @@
 import { execSync } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 
-mkdirSync('reports/lighthouse', { recursive: true })
+const outputDir = process.env.LH_OUTPUT_DIR || 'reports/lighthouse'
+mkdirSync(outputDir, { recursive: true })
 
 const base = process.env.LH_BASE_URL || 'http://127.0.0.1:4173'
 const pages = [
@@ -13,7 +14,7 @@ const pages = [
 
 for (const p of pages) {
   for (let run = 1; run <= 3; run++) {
-    const out = `reports/lighthouse/${p.name}-run${run}`
+    const out = `${outputDir}/${p.name}-run${run}`
     const cmd = `npx lighthouse "${p.url}" --preset=${p.preset} --output=html --output=json --output-path="${out}" --quiet --chrome-flags="--headless"`
     console.log('Running:', cmd)
     try {
@@ -24,4 +25,4 @@ for (const p of pages) {
   }
 }
 
-console.log('Lighthouse runs completed (see reports/lighthouse). Compute median across runs per page/form factor as required.')
+console.log(`Lighthouse runs completed (see ${outputDir}). Compute median across runs per page/form factor as required.`)
