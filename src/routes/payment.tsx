@@ -197,9 +197,14 @@ function PaymentPage() {
           <CardHeader><CardTitle className="text-base">Revisão do pedido</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {(quote?.items ?? items).map((it: any) => (
-              <div key={`${it.nft_id}:${it.edition}`} className="flex justify-between text-sm">
-                <span>{it.name || it.nft_id} ({it.edition}) x{it.quantity}</span>
-                <span>{it.line_total || (Number(it.unit_price || it.price_at_add || 0) * it.quantity).toFixed(2)} ETH</span>
+              <div key={`${it.nft_id}:${it.edition}`} className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span>{it.name || it.nft_id} ({it.edition}) x{it.quantity}</span>
+                  <span>{it.line_total || (Number(it.unit_price || it.price_at_add || 0) * it.quantity).toFixed(2)} ETH</span>
+                </div>
+                {typeof it.available === 'number' && (it.available <= 0 || it.quantity > it.available) && (
+                  <p className="text-xs text-destructive">Indisponível/quantidade acima do disponível ({Math.max(0, it.available)} disp.). Ajuste no carrinho.</p>
+                )}
               </div>
             ))}
             {changedSinceReview && (

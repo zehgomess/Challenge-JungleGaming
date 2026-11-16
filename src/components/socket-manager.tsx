@@ -42,6 +42,7 @@ export function SocketManager() {
       qc.invalidateQueries({ queryKey: ['nfts'] })
       qc.invalidateQueries({ queryKey: ['cart'] })
       qc.invalidateQueries({ queryKey: ['cartQuote'] })
+      qc.refetchQueries({ queryKey: ['cartQuote'], type: 'active' })
       toast.message('Atualização em tempo real: NFT atualizado (preço/disponibilidade).')
     }
 

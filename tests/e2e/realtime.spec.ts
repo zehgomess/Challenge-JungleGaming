@@ -68,4 +68,3 @@ test('checkout: realtime price change prompts review before stale confirmation',
   await emitNftUpdate(page, { id: 'nft-2', price: '0.99', availability: 2, version: 200 })
   await expect(page.getByText(/atualiz|alter|revis|cotação|diferen/i).first()).toBeVisible({ timeout: 15000 })
 })
-

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { cartApi } from '@/api/cart'
 import { useCart } from '@/store/cart'
 import { Button } from '@/components/ui/button'
@@ -18,16 +18,13 @@ function CartPage() {
 
   useEffect(() => setCouponInput(couponCode ?? ''), [couponCode])
 
-  const quoteMutation = useMutation({
-    mutationFn: () => cartApi.quote(items, couponCode),
+  const quoteQuery = useQuery({
+    queryKey: ['cartQuote', 'cart', JSON.stringify(items), couponCode ?? ''],
+    queryFn: () => cartApi.quote(items, couponCode),
+    enabled: items.length >= 0,
   })
 
-  useEffect(() => {
-    quoteMutation.mutate()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(items), couponCode])
-
-  const quote = quoteMutation.data?.data
+  const quote = quoteQuery.data?.data
   const total = quote?.total ?? '0.00'
 
   const hasUnavailable = useMemo(
@@ -117,9 +114,9 @@ function CartPage() {
             <div className="flex justify-between"><span>Desconto</span><span>-{quote?.discount ?? '0.00'} ETH</span></div>
             <div className="flex justify-between"><span>Taxa de rede</span><span>{quote?.network_fee ?? '0.00'} ETH</span></div>
             <div className="flex justify-between font-semibold text-base pt-2 border-t"><span>Total</span><span>{total} ETH</span></div>
-            {quoteMutation.isPending && <p className="text-muted-foreground">Atualizando valores...</p>}
-            {quoteMutation.isError && <p className="text-destructive">Falha ao calcular totais.</p>}
-            <Button asChild className="w-full mt-2" disabled={items.length === 0 || hasUnavailable || quoteMutation.isPending}>
+            {(quoteQuery.isPending || quoteQuery.isFetching) && <p className="text-muted-foreground">Atualizando valores...</p>}
+            {quoteQuery.isError && <p className="text-destructive">Falha ao calcular totais.</p>}
+            <Button asChild className="w-full mt-2" disabled={items.length === 0 || hasUnavailable || quoteQuery.isPending || quoteQuery.isFetching}>
               <Link to="/payment">Ir para pagamento</Link>
             </Button>
             {hasUnavailable && items.length > 0 && (
