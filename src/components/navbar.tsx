@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { Input } from '@/components/ui/input'
 
 export function NavBar() {
   return (
@@ -8,6 +9,7 @@ export function NavBar() {
           Jungle NFT Marketplace
         </Link>
         <div className="flex items-center gap-4">
+          <Input placeholder="Buscar NFTs..." className="w-64 md:w-80" />
           <Link to="/cart" className="text-text hover:text-text-h transition-colors">
             Carrinho
           </Link>
