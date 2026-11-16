@@ -74,9 +74,10 @@ npm run preview
 - **Mudança de condições no checkout:** alterar cupom/itens para gerar diferença de quote e exigir nova revisão.
 - **Sessão expirada:** remover token/forçar 401 em chamadas autenticadas; fluxo redireciona para login com retomada.
 
-## Testes e qualidade (estado)
-- Scripts/configurações para Playwright e Lighthouse estão previstos no `package.json`; a suíte completa de cenários, baselines visuais versionadas e relatórios finais devem ser executados/gerados no ambiente de avaliação conforme os requisitos do desafio.
-- Diretório `reports/` reservado para artefatos de auditoria/testes.
+## Testes e qualidade (executado)
+- **Playwright (E2E/visual):** suíte executável em `tests/e2e/` com cenários de navegação/catálogo, auth/favoritos, carrinho/cupom, checkout/confirmação e perfil/carteiras; baselines visuais versionadas para **home, detalhe, carrinho e pagamento** em **desktop e mobile** (`tests/e2e/visual.spec.ts-snapshots/`). Relatório HTML em `reports/playwright/index.html` e traces/resultados em `test-results/`.
+- **Lighthouse:** matriz executada em build preview com MSW para **home e detalhe, mobile e desktop, 3 runs por cenário** (HTML/JSON em `reports/lighthouse/`). Medianas e justificativas finais devem ser consolidadas a partir dos JSONs conforme exigido.
+- **Execução local realizada:** `npm run build`, smoke/flows E2E e geração de artefatos no ambiente de desenvolvimento.
 
 ## Deploy
 - Preparado para deploy estático (Vite build) com rewrite SPA (`vercel.json`).
