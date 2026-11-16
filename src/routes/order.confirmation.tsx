@@ -49,14 +49,14 @@ function OrderConfirmationPage() {
   }
 
   const order = query.data.data
-  const statusLabel = order.status === 'confirmed' ? 'Confirmado' : order.status === 'refused' ? 'Recusado' : 'Pendente'
+  const statusLabel = order.status === 'confirmed' ? 'Confirmado' : order.status === 'refused' ? 'Recusado' : order.status === 'cancelled' ? 'Cancelado' : 'Pendente'
   const explorer = order.transaction_hash ? `https://explorer.example/tx/${order.transaction_hash}` : null
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-heading font-bold text-text-h">Confirmação do pedido</h1>
-        <Badge variant={order.status === 'confirmed' ? 'default' : order.status === 'refused' ? 'destructive' : 'secondary'}>{statusLabel}</Badge>
+        <Badge variant={order.status === 'confirmed' ? 'default' : (order.status === 'refused' || order.status === 'cancelled') ? 'destructive' : 'secondary'}>{statusLabel}</Badge>
       </div>
 
       <Card>
@@ -76,6 +76,7 @@ function OrderConfirmationPage() {
           )}
           {order.status === 'pending' && <p className="text-muted-foreground">Pedido pendente. O estado será reconciliado automaticamente.</p>}
           {order.status === 'refused' && <p className="text-destructive">Pedido recusado. Seus itens não confirmados permanecem/foram preservados conforme aplicável.</p>}
+          {order.status === 'cancelled' && <p className="text-destructive">Pedido cancelado. Seus itens não confirmados permanecem/foram preservados conforme aplicável.</p>}
           {order.status === 'confirmed' && <p className="text-green-700">Compra confirmada com sucesso. Este recibo é um snapshot imutável do pedido.</p>}
         </CardContent>
       </Card>

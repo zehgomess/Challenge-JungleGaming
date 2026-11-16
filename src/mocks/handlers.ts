@@ -299,7 +299,7 @@ export const handlers = [
     const body = (await request.json().catch(() => ({}))) as { idempotency_key?: string }
     const existing = orders.get(id)
     if (existing) {
-      if (existing.status === 'confirmed' || existing.status === 'refused') {
+      if (existing.status === 'confirmed' || existing.status === 'refused' || (existing as any).status === 'cancelled') {
         return HttpResponse.json(existing)
       }
       existing.status = 'confirmed'

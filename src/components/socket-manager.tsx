@@ -54,7 +54,7 @@ export function SocketManager() {
       qc.invalidateQueries({ queryKey: ['order', id] })
       qc.invalidateQueries({ queryKey: ['orders'] })
       if (payload?.status === 'confirmed') toast.success('Pedido confirmado em tempo real.')
-      else if (payload?.status === 'refused') toast.error('Pedido recusado em tempo real.')
+      else if (payload?.status === 'refused' || payload?.status === 'cancelled') toast.error('Pedido recusado/cancelado em tempo real.')
       else toast.message('Status do pedido atualizado.')
     }
 

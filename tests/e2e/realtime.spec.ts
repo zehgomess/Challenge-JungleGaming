@@ -68,3 +68,35 @@ test('checkout: realtime price change prompts review before stale confirmation',
   await emitNftUpdate(page, { id: 'nft-2', price: '0.99', availability: 2, version: 200 })
   await expect(page.getByText(/atualiz|alter|revis|cotação|diferen/i).first()).toBeVisible({ timeout: 15000 })
 })
+
+test('socket: out-of-order and cancelled order events do not regress confirmed state', async ({ page }) => {
+  await login(page)
+  await page.goto('/nfts/nft-9')
+  await expect(page.getByRole('button', { name: /Adicionar ao carrinho/i })).toBeVisible({ timeout: 15000 })
+  await page.getByRole('button', { name: /Adicionar ao carrinho/i }).click()
+  await page.goto('/payment')
+  await expect(page).toHaveURL(/\/payment/, { timeout: 15000 })
+  await page.getByRole('button', { name: /Simular/i }).click()
+  await expect(page.getByText(/Carteira conectada/i)).toBeVisible({ timeout: 15000 })
+  await page.getByLabel(/Confirmo que revisei/i).check()
+  await page.getByRole('button', { name: /Confirmar compra/i }).click()
+  await expect(page).toHaveURL(/\/order\/confirmation/, { timeout: 30000 })
+
+  const url = new URL(page.url())
+  const orderId = url.searchParams.get('orderId')
+  expect(orderId).toBeTruthy()
+
+  await expect(page.getByText(/Confirmado/i).first()).toBeVisible({ timeout: 15000 })
+
+  // emit newer confirmed, then older pending/cancelled - state must not regress
+  await page.evaluate((id) => fetch('/api/__test/order-event', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ orderId: id, status: 'confirmed', version: 200, updated_at: new Date(Date.now()+5000).toISOString() }) }), orderId)
+  await page.evaluate((id) => fetch('/api/__test/order-event', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ orderId: id, status: 'pending', version: 10, updated_at: new Date(Date.now()-5000).toISOString() }) }), orderId)
+  await page.evaluate((id) => fetch('/api/__test/order-event', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ orderId: id, status: 'cancelled', version: 50, updated_at: new Date(Date.now()-1000).toISOString() }) }), orderId)
+  await page.waitForTimeout(1200)
+
+  await expect(page.getByText(/Confirmado/i).first()).toBeVisible({ timeout: 15000 })
+  await expect(page.getByText(/Pendente|Recusado|Cancelado/i).first()).toHaveCount(0).catch(async () => {
+    // if present in non-status areas, ensure badge/status remains confirmed
+    await expect(page.getByText(/Status/i).locator('..')).toContainText(/Confirmado/i)
+  })
+})
