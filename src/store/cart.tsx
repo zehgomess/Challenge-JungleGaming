@@ -8,6 +8,7 @@ interface CartContextType {
   addItem: (item: CartItem) => void
   updateQuantity: (nftId: string, edition: string, quantity: number) => void
   removeItem: (nftId: string, edition: string) => void
+  removePurchased: (purchased: Array<{ nft_id: string; edition: string; quantity: number }>) => void
   clear: () => void
   setCouponCode: (code?: string) => void
 }
@@ -117,6 +118,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
       },
       removeItem: (nftId, edition) => {
         setItems((prev) => prev.filter((it) => !(it.nft_id === nftId && it.edition === edition)))
+      },
+      removePurchased: (purchased) => {
+        setItems((prev) => {
+          const next = [...prev]
+          for (const p of purchased) {
+            const idx = next.findIndex((it) => it.nft_id === p.nft_id && it.edition === p.edition)
+            if (idx === -1) continue
+            const remaining = next[idx].quantity - p.quantity
+            if (remaining > 0) next[idx] = { ...next[idx], quantity: remaining }
+            else next.splice(idx, 1)
+          }
+          return next
+        })
       },
       clear: () => {
         setItems([])

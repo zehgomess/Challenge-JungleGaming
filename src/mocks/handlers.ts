@@ -32,6 +32,10 @@ const MOCK_USER: User = {
 }
 
 const favoritesByUser = new Map<string, Set<string>>([['user-1', new Set(['nft-2'])]])
+const orders = new Map<string, Order>()
+const walletsByUser = new Map<string, any[]>([
+  ['user-1', [{ id: 'w1', address: '0xabc123def4567890abc123def4567890abcd', network: 'Ethereum', is_primary: true, label: 'Principal' }]],
+])
 
 function getUserId(request: Request) {
   const auth = request.headers.get('authorization') || ''
@@ -147,25 +151,68 @@ export const handlers = [
   }),
 
   http.post('/api/orders', async ({ request }) => {
-    const body = (await request.json()) as { items: any[] }
-    await delay(300)
-    const order: Order = {
+    const body = (await request.json()) as {
+      items?: any[]
+      coupon_code?: string
+      idempotency_key?: string
+      wallet_id?: string
+      network?: string
+    }
+    await delay(400)
+    if (body.idempotency_key) {
+      for (const o of orders.values()) {
+        if ((o as any).idempotency_key === body.idempotency_key) return HttpResponse.json(o)
+      }
+    }
+
+    const quoteItems = (body.items ?? [])
+      .map((it: any) => {
+        const nft = NFTS.find((n) => n.id === it.nft_id)
+        if (!nft) return null
+        const qty = Math.max(0, Math.min(it.quantity || 0, nft.availability))
+        return {
+          nft_id: nft.id,
+          edition: nft.edition,
+          quantity: qty,
+          price_at_add: nft.price,
+        }
+      })
+      .filter(Boolean) as any[]
+
+    const subtotalNum = quoteItems.reduce((sum, it) => {
+      const nft = NFTS.find((n) => n.id === it.nft_id)
+      return sum + Number(nft?.price || 0) * it.quantity
+    }, 0)
+    let discountNum = 0
+    const code = (body.coupon_code || '').trim().toUpperCase()
+    if (code === 'JUNGLE20') discountNum = subtotalNum * 0.2
+    const networkFeeNum = subtotalNum > 0 ? 0.01 : 0
+    const totalNum = Math.max(0, subtotalNum - discountNum + networkFeeNum)
+
+    const order: any = {
       id: `order-${Date.now()}`,
       status: 'pending',
-      items: body.items ?? [],
-      subtotal: '1.50',
-      discount: '0.00',
-      network_fee: '0.01',
-      total: '1.51',
+      items: quoteItems,
+      subtotal: subtotalNum.toFixed(2),
+      discount: discountNum.toFixed(2),
+      network_fee: networkFeeNum.toFixed(2),
+      total: totalNum.toFixed(2),
+      coupon_code: code || undefined,
+      idempotency_key: body.idempotency_key,
+      wallet_id: body.wallet_id,
+      network: body.network,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
+    orders.set(order.id, order)
     return HttpResponse.json(order)
   }),
 
-  http.get('/api/orders/:id', () =>
-    HttpResponse.json({
-      id: 'order-1',
+  http.get('/api/orders/:id', ({ params }) => {
+    const existing = orders.get(String(params.id))
+    if (existing) return HttpResponse.json(existing)
+    return HttpResponse.json({
+      id: params.id,
       status: 'confirmed',
       items: [],
       subtotal: '1.50',
@@ -174,12 +221,38 @@ export const handlers = [
       total: '1.51',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    }),
-  ),
+    })
+  }),
 
-  http.post('/api/orders/:id/confirm', () =>
-    HttpResponse.json({ status: 'confirmed', transaction_hash: '0xmockhash123' }),
-  ),
+  http.post('/api/orders/:id/confirm', async ({ params, request }) => {
+    const id = String(params.id)
+    const body = (await request.json().catch(() => ({}))) as { idempotency_key?: string }
+    const existing = orders.get(id)
+    if (existing) {
+      if (existing.status === 'confirmed' || existing.status === 'refused') {
+        return HttpResponse.json(existing)
+      }
+      existing.status = 'confirmed'
+      existing.transaction_hash = existing.transaction_hash || `0x${id.replace(/[^a-z0-9]/gi, '')}abcd`
+      existing.updated_at = new Date().toISOString()
+      orders.set(id, existing)
+      return HttpResponse.json(existing)
+    }
+    const fallback: Order = {
+      id,
+      status: 'confirmed',
+      items: [],
+      subtotal: '0.00',
+      discount: '0.00',
+      network_fee: '0.00',
+      total: '0.00',
+      transaction_hash: body.idempotency_key || `0x${id}abcd`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    orders.set(id, fallback)
+    return HttpResponse.json(fallback)
+  }),
 
   http.post('/api/cart/quote', async ({ request }) => {
     const body = (await request.json()) as { items?: Array<{ nft_id: string; edition: string; quantity: number }>; coupon_code?: string }
@@ -244,6 +317,22 @@ export const handlers = [
     return HttpResponse.json({ valid: false, error: 'Cupom inválido' })
   }),
 
-  http.get('/api/auth/wallets', () => HttpResponse.json({ wallets: [] })),
-  http.post('/api/auth/wallets', () => HttpResponse.json({ success: true })),
+  http.get('/api/auth/wallets', ({ request }) => {
+    const userId = getUserId(request)
+    if (!userId) return new HttpResponse(null, { status: 401 })
+    return HttpResponse.json({ wallets: walletsByUser.get(userId) ?? [] })
+  }),
+  http.post('/api/auth/wallets', async ({ request }) => {
+    const userId = getUserId(request)
+    if (!userId) return new HttpResponse(null, { status: 401 })
+    const body = (await request.json()) as any
+    const list = walletsByUser.get(userId) ?? []
+    const wallet = { id: `w-${Date.now()}`, ...body }
+    if (wallet.is_primary) {
+      for (const w of list) w.is_primary = false
+    }
+    list.push(wallet)
+    walletsByUser.set(userId, list)
+    return HttpResponse.json({ success: true, wallet })
+  }),
 ]
