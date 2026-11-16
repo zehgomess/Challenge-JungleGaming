@@ -78,20 +78,37 @@ function ProfilePage() {
               <img src={profileForm.watch('avatar') || user?.avatar || 'https://picsum.photos/seed/avatar/200/200'} alt="Avatar" className="w-16 h-16 rounded-full object-cover bg-muted" />
               <div className="flex-1">
                 <Label htmlFor="avatar">Avatar (URL)</Label>
-                <Input id="avatar" {...profileForm.register('avatar')} placeholder="https://..." />
-                {profileForm.formState.errors.avatar && <p className="text-xs text-destructive mt-1">{profileForm.formState.errors.avatar.message as string}</p>}
+                <Input
+                  id="avatar"
+                  aria-invalid={!!profileForm.formState.errors.avatar}
+                  aria-describedby={profileForm.formState.errors.avatar ? 'profile-avatar-error' : undefined}
+                  {...profileForm.register('avatar')}
+                  placeholder="https://..."
+                />
+                {profileForm.formState.errors.avatar && <p id="profile-avatar-error" role="alert" className="text-xs text-destructive mt-1">{profileForm.formState.errors.avatar.message as string}</p>}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="name">Nome</Label>
-                <Input id="name" {...profileForm.register('name')} />
-                {profileForm.formState.errors.name && <p className="text-xs text-destructive mt-1">{profileForm.formState.errors.name.message as string}</p>}
+                <Input
+                  id="name"
+                  aria-invalid={!!profileForm.formState.errors.name}
+                  aria-describedby={profileForm.formState.errors.name ? 'profile-name-error' : undefined}
+                  {...profileForm.register('name')}
+                />
+                {profileForm.formState.errors.name && <p id="profile-name-error" role="alert" className="text-xs text-destructive mt-1">{profileForm.formState.errors.name.message as string}</p>}
               </div>
               <div>
                 <Label htmlFor="email">E-mail</Label>
-                <Input id="email" type="email" {...profileForm.register('email')} />
-                {profileForm.formState.errors.email && <p className="text-xs text-destructive mt-1">{profileForm.formState.errors.email.message as string}</p>}
+                <Input
+                  id="email"
+                  type="email"
+                  aria-invalid={!!profileForm.formState.errors.email}
+                  aria-describedby={profileForm.formState.errors.email ? 'profile-email-error' : undefined}
+                  {...profileForm.register('email')}
+                />
+                {profileForm.formState.errors.email && <p id="profile-email-error" role="alert" className="text-xs text-destructive mt-1">{profileForm.formState.errors.email.message as string}</p>}
               </div>
             </div>
             <Button type="submit" disabled={saving}>{saving ? 'Salvando...' : 'Salvar alterações'}</Button>
@@ -105,18 +122,36 @@ function ProfilePage() {
           <form onSubmit={onChangePassword} className="space-y-4 max-w-md">
             <div>
               <Label htmlFor="currentPassword">Senha atual</Label>
-              <Input id="currentPassword" type="password" {...passForm.register('currentPassword')} />
-              {passForm.formState.errors.currentPassword && <p className="text-xs text-destructive mt-1">{passForm.formState.errors.currentPassword.message}</p>}
+              <Input
+                id="currentPassword"
+                type="password"
+                aria-invalid={!!passForm.formState.errors.currentPassword}
+                aria-describedby={passForm.formState.errors.currentPassword ? 'profile-current-password-error' : undefined}
+                {...passForm.register('currentPassword')}
+              />
+              {passForm.formState.errors.currentPassword && <p id="profile-current-password-error" role="alert" className="text-xs text-destructive mt-1">{passForm.formState.errors.currentPassword.message}</p>}
             </div>
             <div>
               <Label htmlFor="newPassword">Nova senha</Label>
-              <Input id="newPassword" type="password" {...passForm.register('newPassword')} />
-              {passForm.formState.errors.newPassword && <p className="text-xs text-destructive mt-1">{passForm.formState.errors.newPassword.message}</p>}
+              <Input
+                id="newPassword"
+                type="password"
+                aria-invalid={!!passForm.formState.errors.newPassword}
+                aria-describedby={passForm.formState.errors.newPassword ? 'profile-new-password-error' : undefined}
+                {...passForm.register('newPassword')}
+              />
+              {passForm.formState.errors.newPassword && <p id="profile-new-password-error" role="alert" className="text-xs text-destructive mt-1">{passForm.formState.errors.newPassword.message}</p>}
             </div>
             <div>
               <Label htmlFor="confirm">Confirmar nova senha</Label>
-              <Input id="confirm" type="password" {...passForm.register('confirm')} />
-              {passForm.formState.errors.confirm && <p className="text-xs text-destructive mt-1">{passForm.formState.errors.confirm.message}</p>}
+              <Input
+                id="confirm"
+                type="password"
+                aria-invalid={!!passForm.formState.errors.confirm}
+                aria-describedby={passForm.formState.errors.confirm ? 'profile-confirm-error' : undefined}
+                {...passForm.register('confirm')}
+              />
+              {passForm.formState.errors.confirm && <p id="profile-confirm-error" role="alert" className="text-xs text-destructive mt-1">{passForm.formState.errors.confirm.message}</p>}
             </div>
             <Button type="submit">Alterar senha</Button>
             <p className="text-xs text-muted-foreground">Senha atual fictícia para demo: password123</p>

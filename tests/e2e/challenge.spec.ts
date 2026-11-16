@@ -217,6 +217,7 @@ test('profile: validates avatar URL and password confirmation before saving', as
   await page.getByLabel(/Avatar \(URL\)/i).fill('not-a-url')
   await page.getByRole('button', { name: /Salvar alterações/i }).click()
   await expect(page.getByText(/URL inválida/i)).toBeVisible()
+  await expect(page.getByLabel(/Avatar \(URL\)/i)).toHaveAttribute('aria-invalid', 'true')
 
   await page.getByLabel(/Avatar \(URL\)/i).fill('https://example.com/avatar.png')
   await page.getByLabel(/Senha atual/i).fill('password123')
@@ -249,6 +250,21 @@ test('forms: keyboard navigation reaches primary actions on login', async ({ pag
   await expect(page.getByLabel(/^Senha$/i)).toBeFocused()
   await page.keyboard.press('Tab')
   await expect(page.getByRole('button', { name: /^Entrar$/i })).toBeFocused()
+})
+
+test('a11y: page language and validation errors are announced and associated', async ({ page }) => {
+  await page.goto('/login')
+  await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR')
+  await page.getByLabel(/E-mail/i).fill('invalid-email')
+  await page.getByLabel(/^Senha$/i).fill('123')
+  await page.getByRole('button', { name: /^Entrar$/i }).click()
+
+  const email = page.getByLabel(/E-mail/i)
+  await expect(email).toHaveAttribute('aria-invalid', 'true')
+  const errorId = await email.getAttribute('aria-describedby')
+  expect(errorId).toBeTruthy()
+  await expect(page.locator(`#${errorId}`)).toHaveAttribute('role', 'alert')
+  await expect(page.getByLabel(/^Senha$/i)).toHaveAttribute('aria-invalid', 'true')
 })
 
 test('loading states: skeleton/placeholder appears during slow catalog load', async ({ page }) => {

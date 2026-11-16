@@ -64,16 +64,30 @@ function Login() {
           <CardDescription>Acesse sua conta de colecionador</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit((data) => mutation.mutate(data))} className="space-y-4">
+          <form noValidate onSubmit={handleSubmit((data) => mutation.mutate(data))} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
-              <Input id="email" type="email" placeholder="seu@email.com" {...register('email')} />
-              {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+              <Input
+                id="email"
+                type="email"
+                placeholder="seu@email.com"
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? 'login-email-error' : undefined}
+                {...register('email')}
+              />
+              {errors.email && <p id="login-email-error" role="alert" className="text-xs text-destructive">{errors.email.message}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
-              <Input id="password" type="password" placeholder="••••••••" {...register('password')} />
-              {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                aria-invalid={!!errors.password}
+                aria-describedby={errors.password ? 'login-password-error' : undefined}
+                {...register('password')}
+              />
+              {errors.password && <p id="login-password-error" role="alert" className="text-xs text-destructive">{errors.password.message}</p>}
             </div>
             <Button type="submit" className="w-full" disabled={mutation.isPending}>
               {mutation.isPending ? 'Entrando...' : 'Entrar'}

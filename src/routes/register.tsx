@@ -74,27 +74,55 @@ function Register() {
           <CardDescription>Junte-se ao marketplace de NFTs</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit((data) => mutation.mutate(data))} className="space-y-4">
+          <form noValidate onSubmit={handleSubmit((data) => mutation.mutate(data))} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nome completo</Label>
-              <Input id="name" type="text" placeholder="João Silva" {...register('name')} />
-              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+              <Input
+                id="name"
+                type="text"
+                placeholder="João Silva"
+                aria-invalid={!!errors.name}
+                aria-describedby={errors.name ? 'register-name-error' : undefined}
+                {...register('name')}
+              />
+              {errors.name && <p id="register-name-error" role="alert" className="text-xs text-destructive">{errors.name.message}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
-              <Input id="email" type="email" placeholder="seu@email.com" {...register('email')} />
-              {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+              <Input
+                id="email"
+                type="email"
+                placeholder="seu@email.com"
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? 'register-email-error' : undefined}
+                {...register('email')}
+              />
+              {errors.email && <p id="register-email-error" role="alert" className="text-xs text-destructive">{errors.email.message}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
-              <Input id="password" type="password" placeholder="••••••••" {...register('password')} />
-              {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                aria-invalid={!!errors.password}
+                aria-describedby={errors.password ? 'register-password-error' : undefined}
+                {...register('password')}
+              />
+              {errors.password && <p id="register-password-error" role="alert" className="text-xs text-destructive">{errors.password.message}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirmar senha</Label>
-              <Input id="confirmPassword" type="password" placeholder="••••••••" {...register('confirmPassword')} />
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="••••••••"
+                aria-invalid={!!errors.confirmPassword}
+                aria-describedby={errors.confirmPassword ? 'register-confirm-error' : undefined}
+                {...register('confirmPassword')}
+              />
               {errors.confirmPassword && (
-                <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
+                <p id="register-confirm-error" role="alert" className="text-xs text-destructive">{errors.confirmPassword.message}</p>
               )}
             </div>
             <Button type="submit" className="w-full" disabled={mutation.isPending}>
