@@ -49,6 +49,12 @@ let nextUserId = 2
 
 const favoritesByUser = new Map<string, Set<string>>([['user-1', new Set(['nft-2'])]])
 const orders = new Map<string, Order>()
+const completedListSearches: Record<string, number> = {}
+const listQueryDiagnostics = {
+  started: {} as Record<string, number>,
+  completed: {} as Record<string, number>,
+  aborted: {} as Record<string, number>,
+}
 const walletsByUser = new Map<string, any[]>([
   ['user-1', [{ id: 'w1', address: '0xabc123def4567890abc123def4567890abcd', network: 'Ethereum', is_primary: true, label: 'Principal' }]],
 ])
@@ -56,6 +62,8 @@ const walletsByUser = new Map<string, any[]>([
 const testControls = {
   favoriteFail: 0,
   auth401: false,
+  nftGetFail: 0,
+  nftListDelayBySearch: {} as Record<string, number>,
   orderCreateTimeout: 0,
   orderCreateFail: 0,
   orderConfirmPending: 0,
@@ -77,6 +85,11 @@ export const handlers = [
   http.get('/api/nfts', async ({ request }) => {
     const url = new URL(request.url)
     const search = (url.searchParams.get('search') || '').toLowerCase().trim()
+    const increment = (bucket: Record<string, number>) => {
+      bucket[search] = (bucket[search] ?? 0) + 1
+    }
+    increment(listQueryDiagnostics.started)
+    request.signal.addEventListener('abort', () => increment(listQueryDiagnostics.aborted), { once: true })
     const edition = url.searchParams.get('edition')
     const availability = url.searchParams.get('availability')
     const sort = url.searchParams.get('sort') || 'recent'
@@ -106,7 +119,9 @@ export const handlers = [
     const start = (page - 1) * limit
     const paged = items.slice(start, start + limit)
     const userId = getUserId(request)
-    await delay(250)
+    await delay(testControls.nftListDelayBySearch[search] ?? 250)
+    completedListSearches[search] = (completedListSearches[search] ?? 0) + 1
+    increment(listQueryDiagnostics.completed)
 
     const response: NFTListResponse = {
       items: withFavoriteState(paged, userId),
@@ -120,6 +135,10 @@ export const handlers = [
 
   http.get('/api/nfts/:id', async ({ params, request }) => {
     await delay(200)
+    if (testControls.nftGetFail > 0) {
+      testControls.nftGetFail -= 1
+      return HttpResponse.json({ message: 'Falha simulada ao carregar NFT' }, { status: 503 })
+    }
     const nft = NFTS.find((n) => n.id === params.id)
     if (!nft) return new HttpResponse(null, { status: 404 })
     const userId = getUserId(request)
@@ -482,6 +501,23 @@ export const handlers = [
   http.post('/api/__test/control', async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as any
     if (Object.prototype.hasOwnProperty.call(body, 'auth401')) testControls.auth401 = !!body.auth401
+    if (typeof body.nftGetFail === 'number') testControls.nftGetFail = body.nftGetFail
+    if (body.nftListDelayBySearch && typeof body.nftListDelayBySearch === 'object') {
+      testControls.nftListDelayBySearch = Object.fromEntries(
+        Object.entries(body.nftListDelayBySearch)
+          .filter(([, value]) => typeof value === 'number')
+          .map(([key, value]) => [
+            key.toLowerCase().trim(),
+            Math.max(0, Math.min(5000, value as number)),
+          ]),
+      )
+    }
+    if (body.resetListQueryDiagnostics) {
+      for (const bucket of Object.values(listQueryDiagnostics)) {
+        for (const key of Object.keys(bucket)) delete bucket[key]
+      }
+      for (const key of Object.keys(completedListSearches)) delete completedListSearches[key]
+    }
     if (typeof body.favoriteFail === 'number') testControls.favoriteFail = body.favoriteFail
     if (typeof body.orderCreateTimeout === 'number') testControls.orderCreateTimeout = body.orderCreateTimeout
     if (typeof body.orderCreateFail === 'number') testControls.orderCreateFail = body.orderCreateFail
@@ -493,6 +529,12 @@ export const handlers = [
       connectedClients: getSocketClientCount(),
       socketClient: getSocketDiagnostics(),
       lastBroadcast: getSocketBroadcastDiagnostics(),
+      completedListSearches: { ...completedListSearches },
+      listQueryDiagnostics: {
+        started: { ...listQueryDiagnostics.started },
+        completed: { ...listQueryDiagnostics.completed },
+        aborted: { ...listQueryDiagnostics.aborted },
+      },
     })
   }),
   http.post('/api/__test/socket-disconnect', () => {

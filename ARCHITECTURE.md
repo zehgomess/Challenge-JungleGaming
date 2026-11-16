@@ -47,14 +47,14 @@ Aplicação SPA em React + TypeScript (Vite) com roteamento client-side (TanStac
 ## Estratégia de cache e reconciliação
 - TanStack Query como fonte de cache servidor; chaves privadas incluem `userId` (`nfts`, `nft`, `order`, `wallets`) e eventos invalidam por prefixo.
 - Eventos real-time disparam invalidações/refetches para aproximar estado REST↔Socket.IO; reconexão força reconciliação das consultas ativas/relevantes.
-- `keepPreviousData` no catálogo para transições de paginação/filtros sem flicker.
+- `keepPreviousData` no catálogo para transições de paginação/filtros sem flicker; E2E cobre restauração do histórico e resposta lenta antiga não substituindo o resultado de busca mais recente.
 
 ## Decisões e limitações
 - **MSW em browser + socket binding:** abordagem adequada para demo sem backend real; os controles `__test` permitem cenários determinísticos de falha/reconexão. A aplicação continua sendo uma simulação cliente, sem backend persistente compartilhado entre sessões/dispositivos.
 - **Escopo de eventos de pedido:** cada cliente identifica a sessão após conectar; `order.updated` é enviado somente aos sockets associados ao dono do pedido, e a UI rejeita eventos de outro `userId`.
 - **Disponibilidade/preço em tempo real:** cotação é refeita no carrinho/checkout e submit bloqueia preço/disponibilidade desatualizados. Alterações concorrentes e cancelamento são cobertos em E2E; executar contra infraestrutura externa real ainda depende de backend Socket.IO fora do mock do browser.
 - **Fidelidade visual/acessibilidade/performance:** baselines visuais para home/detalhe/carrinho/pagamento estão versionadas em desktop/mobile; ainda faltam validação pixel-fiel contra o Figma e auditoria completa de foco/teclado em todos os diálogos/fluxos. A matriz Lighthouse foi executada, mas métricas mobile de detalhe e metas finais ainda precisam de justificativa/otimização.
-- **Testes E2E/visual e auditorias:** Playwright executa desktop/mobile com um worker; a suíte atual passou 70/70 localmente. `reports/playwright` é artefato gerado; não tratar mudanças automáticas do relatório como evidência versionada sem revisar o conteúdo.
+- **Testes E2E/visual e auditorias:** Playwright executa desktop/mobile com um worker; a suíte atual passou 76/76 localmente, incluindo falha transitória com retry. `reports/playwright` é artefato gerado; não tratar mudanças automáticas do relatório como evidência versionada sem revisar o conteúdo.
 
 ## Desvios potenciais em relação ao Figma
 - Sem acesso ao arquivo Figma neste ambiente, a implementação prioriza estrutura responsiva, componentes shadcn/ui e consistência funcional; tokens visuais (tipografia, espaçamentos, proporções exatas) devem ser ajustados para correspondência pixel-fiel conforme o design de referência.

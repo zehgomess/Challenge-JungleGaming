@@ -19,6 +19,31 @@ test('detail: direct access and not found', async ({ page }) => {
   ).toBeVisible({ timeout: 15000 })
 })
 
+test('detail: recover from a transient API failure with retry', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: /Marketplace de NFTs/i })).toBeVisible()
+  await page.evaluate(() =>
+    fetch('/api/__test/control', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      // Query retries three times automatically; fail all four initial attempts.
+      body: JSON.stringify({ nftGetFail: 4 }),
+    }),
+  )
+
+  await page.getByRole('link', { name: /Crypto Jungle #2/i }).first().evaluate((element) =>
+    (element as HTMLAnchorElement).click(),
+  )
+  await expect(page.getByRole('heading', { name: /Erro ao carregar NFT/i })).toBeVisible({
+    timeout: 15000,
+  })
+  await page.getByRole('button', { name: /Tentar novamente/i }).click()
+  await expect(page.getByRole('heading', { name: /Crypto Jungle #2/i })).toBeVisible({
+    timeout: 15000,
+  })
+  await expect(page.getByRole('button', { name: /Adicionar ao carrinho/i })).toBeVisible()
+})
+
 test('register: validation and conflict', async ({ page }) => {
   await page.goto('/register')
   await page.getByLabel(/Nome completo/i).fill('A')

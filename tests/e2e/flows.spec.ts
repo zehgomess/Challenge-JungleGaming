@@ -19,6 +19,78 @@ test('catalog search, filter, sort and pagination via URL', async ({ page }) => 
   await expect(page.getByText(/Página 1 de/i)).toBeVisible()
 })
 
+test('catalog browser history restores prior URL filters and search state', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: /Marketplace de NFTs/i })).toBeVisible()
+
+  await page.getByLabel(/Busca/i).fill('Crypto Jungle #2')
+  await expect(page).toHaveURL(/search=Crypto\+Jungle\+%232|search=Crypto%20Jungle%20%232/)
+  await page.getByLabel(/Edição/i).selectOption('Gold')
+  await expect(page).toHaveURL(/edition=Gold/)
+
+  await page.goBack()
+  await expect(page).toHaveURL(/search=/)
+  await expect(page.getByLabel(/Edição/i)).toHaveValue('')
+  await expect(page.getByLabel(/Busca/i)).toHaveValue('Crypto Jungle #2')
+
+  await page.goBack()
+  await expect(page).not.toHaveURL(/search=|edition=/)
+  await expect(page.getByLabel(/Busca/i)).toHaveValue('')
+})
+
+test('catalog ignores an older slow search response and keeps the newest URL result', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: /Marketplace de NFTs/i })).toBeVisible()
+  await page.evaluate(() =>
+    fetch('/api/__test/control', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        resetListQueryDiagnostics: true,
+        nftListDelayBySearch: {
+          'crypto jungle #2': 1500,
+          'crypto jungle #3': 20,
+        },
+      }),
+    }),
+  )
+
+  const search = page.getByLabel(/Busca/i)
+  await search.fill('Crypto Jungle #2')
+  await expect.poll(() => new URL(page.url()).searchParams.get('search')).toBe('Crypto Jungle #2')
+  await expect.poll(
+    async () =>
+      page.evaluate(async () => {
+        const response = await fetch('/api/__test/control', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({}),
+        })
+        const status = await response.json()
+        return status.listQueryDiagnostics.started['crypto jungle #2'] ?? 0
+      }),
+  ).toBeGreaterThan(0)
+
+  await search.fill('Crypto Jungle #3')
+  await expect.poll(() => new URL(page.url()).searchParams.get('search')).toBe('Crypto Jungle #3')
+  await expect(page.getByRole('link', { name: /Crypto Jungle #3/i }).first()).toBeVisible({
+    timeout: 15000,
+  })
+  await expect.poll(
+    async () =>
+      page.evaluate(async () => {
+        const response = await fetch('/api/__test/control', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({}),
+        })
+        const status = await response.json()
+        return status.listQueryDiagnostics.completed['crypto jungle #2'] ?? 0
+      }),
+  ).toBeGreaterThan(0)
+  await expect(page.getByRole('link', { name: /Crypto Jungle #2/i })).toHaveCount(0)
+})
+
 test('favorite requires auth and works after login', async ({ page }) => {
   await page.goto('/nfts/nft-2')
   await expect(page.getByRole('button', { name: /Favoritar|Favoritado/i })).toBeVisible({ timeout: 15000 })
