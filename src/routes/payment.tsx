@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { requireAuth } from '@/lib/auth'
 import { useCart } from '@/store/cart'
 import { cartApi } from '@/api/cart'
@@ -39,9 +39,17 @@ function PaymentPage() {
     }
   }, [wallets, selectedWallet])
 
-  const quoteMutation = useMutation({ mutationFn: () => cartApi.quote(items, couponCode) })
-  useEffect(() => { if (items.length) quoteMutation.mutate() }, [JSON.stringify(items), couponCode])
-  const quote = quoteMutation.data?.data
+  const quoteQuery = useQuery({
+    queryKey: ['cartQuote', 'payment', JSON.stringify(items), couponCode ?? ''],
+    queryFn: () => cartApi.quote(items, couponCode),
+    enabled: items.length > 0,
+  })
+  const quote = quoteQuery.data?.data
+
+  useEffect(() => {
+    // reset acceptance when cart/coupon context changes
+    setBaseQuoteJson('')
+  }, [JSON.stringify(items), couponCode])
 
   useEffect(() => {
     if (quote && !baseQuoteJson) {
@@ -69,7 +77,8 @@ function PaymentPage() {
     walletStatus === 'connected' &&
     agreed &&
     !submitting &&
-    !quoteMutation.isPending &&
+    !quoteQuery.isPending &&
+    !quoteQuery.isFetching &&
     !changedSinceReview &&
     !(quote?.items ?? []).some((i) => i.available <= 0 || i.quantity <= 0)
 
