@@ -53,11 +53,11 @@ function NftDetail() {
       if (ctx?.prevNft) qc.setQueryData(['nft', nftId], ctx.prevNft)
       if (ctx?.prevList) for (const [key, data] of ctx.prevList) qc.setQueryData(key, data)
       if (e?.message === 'AUTH_REQUIRED') {
-        toast.error('FaÃ§a login para favoritar')
+        toast.error('Faça login para favoritar')
         navigate({ to: '/login', search: { returnTo: `/nfts/${nftId}` } })
         return
       }
-      toast.error('NÃ£o foi possÃ­vel atualizar favorito')
+      toast.error('Não foi possível atualizar favorito')
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['nft', nftId] })
@@ -82,17 +82,17 @@ function NftDetail() {
     return (
       <div className="p-6 max-w-3xl mx-auto text-center">
         <h1 className="text-2xl font-heading font-bold text-text-h">
-          {status === 404 ? 'NFT nÃ£o encontrado' : 'Erro ao carregar NFT'}
+          {status === 404 ? 'NFT não encontrado' : 'Erro ao carregar NFT'}
         </h1>
         <p className="text-muted-foreground mt-2">
           {status === 404
-            ? 'Este item pode ter sido removido ou o link estÃ¡ incorreto.'
+            ? 'Este item pode ter sido removido ou o link está incorreto.'
             : 'Tente novamente em instantes.'}
         </p>
         <div className="mt-4 flex gap-2 justify-center">
           {status !== 404 && <Button onClick={() => query.refetch()}>Tentar novamente</Button>}
           <Button variant="outline" asChild>
-            <Link to="/">Voltar ao catÃ¡logo</Link>
+            <Link to="/">Voltar ao catálogo</Link>
           </Button>
         </div>
       </div>
@@ -104,7 +104,7 @@ function NftDetail() {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
-      <Link to="/" className="text-sm underline text-muted-foreground">â† Voltar ao catÃ¡logo</Link>
+      <Link to="/" className="text-sm underline text-muted-foreground">← Voltar ao catálogo</Link>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-3">
           <div className="aspect-square bg-muted rounded-lg overflow-hidden">
@@ -133,19 +133,19 @@ function NftDetail() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary">EdiÃ§Ã£o: {nft.edition}</Badge>
+            <Badge variant="secondary">Edição: {nft.edition}</Badge>
             <Badge variant={unavailable ? 'outline' : 'default'}>
-              {unavailable ? 'Esgotado' : `${nft.availability} disponÃ­vel(is)`}
+              {unavailable ? 'Esgotado' : `${nft.availability} disponível(is)`}
             </Badge>
             <Badge variant="secondary">Royalties: {nft.royalties}%</Badge>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">InformaÃ§Ãµes</CardTitle>
+              <CardTitle className="text-base">Informações</CardTitle>
             </CardHeader>
             <CardContent className="text-sm space-y-2">
-              <div className="flex justify-between"><span>PreÃ§o</span><strong>{nft.price} ETH</strong></div>
+              <div className="flex justify-between"><span>Preço</span><strong>{nft.price} ETH</strong></div>
               <div className="flex justify-between"><span>Criador</span><span className="font-mono">{nft.creator}</span></div>
               <div className="flex justify-between"><span>Supply</span><span>{nft.total_supply}</span></div>
               <div className="flex justify-between"><span>ID</span><span className="font-mono">{nft.id}</span></div>
@@ -169,14 +169,14 @@ function NftDetail() {
                 toast.success('Item adicionado ao carrinho')
               }}
             >
-              {unavailable ? 'EdiÃ§Ã£o indisponÃ­vel' : 'Adicionar ao carrinho'}
+              {unavailable ? 'Edição indisponível' : 'Adicionar ao carrinho'}
             </Button>
             <Button variant="outline" asChild>
               <Link to="/cart">Ver carrinho</Link>
             </Button>
           </div>
           {unavailable && (
-            <p className="text-sm text-muted-foreground">Esta ediÃ§Ã£o nÃ£o estÃ¡ disponÃ­vel no momento. Tente outra ediÃ§Ã£o quando houver reposiÃ§Ã£o.</p>
+            <p className="text-sm text-muted-foreground">Esta edição não está disponível no momento. Tente outra edição quando houver reposição.</p>
           )}
         </div>
       </div>

@@ -21,7 +21,7 @@ function RootComponent() {
             <main className="flex-grow">
               <Outlet />
             </main>
-            <Sonner />
+            <Sonner position="top-right" />
             <SocketManager />
           </div>
         </CartProvider>
