@@ -12,8 +12,19 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
-    { name: 'chromium-desktop', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile', use: { ...devices['Pixel 5'] } },
+    {
+      name: 'chromium-desktop',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+    },
+    {
+      name: 'mobile',
+      use: { ...devices['Pixel 5'], viewport: { width: 390, height: 844 } },
+    },
+    {
+      name: 'tablet-visual',
+      testMatch: /visual\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], viewport: { width: 768, height: 1024 } },
+    },
   ],
   webServer: {
     command: 'npm run preview -- --host 127.0.0.1 --port 4173',
