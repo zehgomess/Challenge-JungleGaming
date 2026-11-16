@@ -5,6 +5,7 @@ import { orderApi } from '@/api/orders'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { useSession } from '@/store/session'
 
 export const Route = createFileRoute('/order/confirmation')({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -18,10 +19,11 @@ export const Route = createFileRoute('/order/confirmation')({
 
 function OrderConfirmationPage() {
   const { orderId } = Route.useSearch()
+  const { user } = useSession()
   const effectiveId = orderId || (typeof window !== 'undefined' ? sessionStorage.getItem('pending_order_id') || undefined : undefined)
 
   const query = useQuery({
-    queryKey: ['order', effectiveId],
+    queryKey: ['order', user?.id ?? 'anonymous', effectiveId],
     queryFn: () => orderApi.get(effectiveId!),
     enabled: !!effectiveId,
     refetchInterval: (q) => (q.state.data?.data.status === 'pending' ? 2000 : false),

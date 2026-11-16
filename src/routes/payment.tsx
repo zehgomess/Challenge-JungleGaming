@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import { useSession } from '@/store/session'
 
 export const Route = createFileRoute('/payment')({
   beforeLoad: ({ location }) => {
@@ -20,6 +21,7 @@ export const Route = createFileRoute('/payment')({
 
 function PaymentPage() {
   const navigate = useNavigate()
+  const { user } = useSession()
   const { items, couponCode, removePurchased } = useCart()
   const [selectedWallet, setSelectedWallet] = useState<string>('')
   const [network, setNetwork] = useState('Ethereum')
@@ -28,7 +30,7 @@ function PaymentPage() {
   const [submitting, setSubmitting] = useState(false)
   const [baseQuoteJson, setBaseQuoteJson] = useState<string>('')
 
-  const walletsQuery = useQuery({ queryKey: ['wallets'], queryFn: () => authApi.wallets() })
+  const walletsQuery = useQuery({ queryKey: ['wallets', user?.id], queryFn: () => authApi.wallets() })
   const wallets = walletsQuery.data?.data.wallets ?? []
 
   useEffect(() => {

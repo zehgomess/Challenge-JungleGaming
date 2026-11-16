@@ -83,7 +83,6 @@ test('session: cleared auth on payment redirects to login with resume to payment
     localStorage.removeItem('auth_token')
     localStorage.removeItem('auth_user')
   })
-  await page.goto('/payment')
-  await expect(page).toHaveURL(/\/login/, { timeout: 15000 })
+  await expect(page).toHaveURL(/\/login\?returnTo=%2Fpayment/, { timeout: 15000 })
   await expect(page.getByText(/Entrar/i).first()).toBeVisible({ timeout: 15000 })
 })

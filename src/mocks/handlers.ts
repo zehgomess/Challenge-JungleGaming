@@ -3,6 +3,7 @@ import type { NFT, NFTListResponse, User, Order } from '@/types'
 import {
   disconnectSocketClients,
   emitToAll,
+  emitToUser,
   getSocketBroadcastDiagnostics,
   getSocketClientCount,
 } from './socket'
@@ -39,6 +40,13 @@ const MOCK_USER: User = {
   created_at: new Date().toISOString(),
 }
 
+const usersById = new Map<string, User>([[MOCK_USER.id, MOCK_USER]])
+const userIdByToken = new Map<string, string>([['mock-token-123', MOCK_USER.id]])
+const credentialsByEmail = new Map<string, { password: string; token: string; userId: string }>([
+  ['collector@jungle.io', { password: 'password123', token: 'mock-token-123', userId: MOCK_USER.id }],
+])
+let nextUserId = 2
+
 const favoritesByUser = new Map<string, Set<string>>([['user-1', new Set(['nft-2'])]])
 const orders = new Map<string, Order>()
 const walletsByUser = new Map<string, any[]>([
@@ -56,8 +64,8 @@ const testControls = {
 function getUserId(request: Request) {
   if (testControls.auth401) return null
   const auth = request.headers.get('authorization') || ''
-  if (auth.includes('mock-token')) return 'user-1'
-  return null
+  const token = auth.replace(/^Bearer\s+/i, '')
+  return userIdByToken.get(token) ?? null
 }
 
 function withFavoriteState(items: NFT[], userId: string | null) {
@@ -152,8 +160,10 @@ export const handlers = [
   http.post('/api/auth/login', async ({ request }) => {
     const body = (await request.json()) as { email: string; password: string }
     await delay(300)
-    if (body.email === 'collector@jungle.io' && body.password === 'password123') {
-      return HttpResponse.json({ token: 'mock-token-123', user: MOCK_USER })
+    const credentials = credentialsByEmail.get(body.email.toLowerCase())
+    if (credentials?.password === body.password) {
+      const user = usersById.get(credentials.userId)
+      if (user) return HttpResponse.json({ token: credentials.token, user })
     }
     return new HttpResponse(null, { status: 401 })
   }),
@@ -161,44 +171,66 @@ export const handlers = [
   http.post('/api/auth/register', async ({ request }) => {
     const body = (await request.json()) as { email: string; password: string; name: string }
     await delay(300)
-    if (body.email === 'existing@jungle.io') {
+    const email = body.email.trim().toLowerCase()
+    if (email === 'existing@jungle.io' || credentialsByEmail.has(email)) {
       return new HttpResponse(null, { status: 409 })
     }
-    return HttpResponse.json({
-      token: 'mock-token-new',
-      user: { ...MOCK_USER, id: `user-${Date.now()}`, email: body.email, name: body.name },
-    })
+    const id = `user-${nextUserId++}`
+    const token = `mock-token-${id}`
+    const user: User = {
+      id,
+      email,
+      name: body.name,
+      avatar: '',
+      created_at: new Date().toISOString(),
+    }
+    usersById.set(id, user)
+    userIdByToken.set(token, id)
+    credentialsByEmail.set(email, { password: body.password, token, userId: id })
+    favoritesByUser.set(id, new Set())
+    walletsByUser.set(id, [])
+    return HttpResponse.json({ token, user })
   }),
 
   http.post('/api/auth/logout', () => HttpResponse.json({ success: true })),
   http.get('/api/auth/me', ({ request }) => {
     const userId = getUserId(request)
     if (!userId) return new HttpResponse(null, { status: 401 })
-    return HttpResponse.json(MOCK_USER)
+    const user = usersById.get(userId)
+    if (!user) return new HttpResponse(null, { status: 401 })
+    return HttpResponse.json(user)
   }),
   http.patch('/api/auth/profile', async ({ request }) => {
     const userId = getUserId(request)
     if (!userId) return new HttpResponse(null, { status: 401 })
     const body = (await request.json()) as Partial<User>
-    Object.assign(MOCK_USER, body, { updated_at: new Date().toISOString() } as any)
+    const user = usersById.get(userId)
+    if (!user) return new HttpResponse(null, { status: 401 })
+    Object.assign(user, body, { updated_at: new Date().toISOString() } as any)
     await delay(200)
-    return HttpResponse.json(MOCK_USER)
+    return HttpResponse.json(user)
   }),
   http.post('/api/auth/change-password', async ({ request }) => {
     const userId = getUserId(request)
     if (!userId) return new HttpResponse(null, { status: 401 })
     const body = (await request.json()) as { currentPassword?: string; newPassword?: string }
     await delay(200)
-    if (body.currentPassword !== 'password123') {
+    const user = usersById.get(userId)
+    const credentials = user ? credentialsByEmail.get(user.email.toLowerCase()) : undefined
+    if (!credentials) return new HttpResponse(null, { status: 401 })
+    if (body.currentPassword !== credentials.password) {
       return HttpResponse.json({ message: 'Senha atual incorreta' }, { status: 400 })
     }
     if (!body.newPassword || body.newPassword.length < 6) {
       return HttpResponse.json({ message: 'Nova senha inválida' }, { status: 400 })
     }
+    credentials.password = body.newPassword
     return HttpResponse.json({ success: true })
   }),
 
   http.post('/api/orders', async ({ request }) => {
+    const userId = getUserId(request)
+    if (!userId) return new HttpResponse(null, { status: 401 })
     const body = (await request.json()) as {
       items?: any[]
       coupon_code?: string
@@ -213,7 +245,7 @@ export const handlers = [
 
     if (body.idempotency_key) {
       for (const o of orders.values()) {
-        if ((o as any).idempotency_key === body.idempotency_key) {
+        if ((o as any).user_id === userId && (o as any).idempotency_key === body.idempotency_key) {
           return HttpResponse.json(o)
         }
       }
@@ -261,6 +293,7 @@ export const handlers = [
 
     const order: any = {
       id: `order-${Date.now()}`,
+      user_id: userId,
       status: 'pending',
       items: quoteItems,
       subtotal: subtotalNum.toFixed(2),
@@ -275,7 +308,7 @@ export const handlers = [
       updated_at: new Date().toISOString(),
     }
     orders.set(order.id, order)
-    emitToAll('order.updated', { orderId: order.id, status: order.status, updated_at: order.updated_at })
+    emitToUser(userId, 'order.updated', { orderId: order.id, userId, status: order.status, updated_at: order.updated_at })
     if (shouldTimeout) {
       // simulate timeout after server-side creation to allow idempotent recovery on retry
       await delay(500)
@@ -284,9 +317,14 @@ export const handlers = [
     return HttpResponse.json(order)
   }),
 
-  http.get('/api/orders/:id', ({ params }) => {
+  http.get('/api/orders/:id', ({ params, request }) => {
+    const userId = getUserId(request)
+    if (!userId) return new HttpResponse(null, { status: 401 })
     const existing = orders.get(String(params.id))
-    if (existing) return HttpResponse.json(existing)
+    if (existing) {
+      if ((existing as any).user_id !== userId) return new HttpResponse(null, { status: 404 })
+      return HttpResponse.json(existing)
+    }
     return HttpResponse.json({
       id: params.id,
       status: 'confirmed',
@@ -301,10 +339,13 @@ export const handlers = [
   }),
 
   http.post('/api/orders/:id/confirm', async ({ params, request }) => {
+    const userId = getUserId(request)
+    if (!userId) return new HttpResponse(null, { status: 401 })
     const id = String(params.id)
     const body = (await request.json().catch(() => ({}))) as { idempotency_key?: string }
     const existing = orders.get(id)
     if (existing) {
+      if ((existing as any).user_id !== userId) return new HttpResponse(null, { status: 404 })
       if (existing.status === 'confirmed' || existing.status === 'refused' || (existing as any).status === 'cancelled') {
         return HttpResponse.json(existing)
       }
@@ -316,11 +357,12 @@ export const handlers = [
       existing.transaction_hash = existing.transaction_hash || `0x${id.replace(/[^a-z0-9]/gi, '')}abcd`
       existing.updated_at = new Date().toISOString()
       orders.set(id, existing)
-      emitToAll('order.updated', { orderId: id, status: existing.status, updated_at: existing.updated_at })
+      emitToUser(userId, 'order.updated', { orderId: id, userId, status: existing.status, updated_at: existing.updated_at })
       return HttpResponse.json(existing)
     }
     const fallback: any = {
       id,
+      user_id: userId,
       status: 'confirmed',
       items: [],
       subtotal: '0.00',
@@ -332,7 +374,7 @@ export const handlers = [
       updated_at: new Date().toISOString(),
     }
     orders.set(id, fallback)
-    emitToAll('order.updated', { orderId: id, status: fallback.status, updated_at: fallback.updated_at })
+    emitToUser(userId, 'order.updated', { orderId: id, userId, status: fallback.status, updated_at: fallback.updated_at })
     return HttpResponse.json(fallback)
   }),
 
@@ -477,22 +519,23 @@ export const handlers = [
   }),
   http.post('/api/__test/order-event', async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as any
+    const orderId = body.orderId || body.id
+    const existing = orderId ? orders.get(String(orderId)) : undefined
+    const userId = (existing as any)?.user_id
     const payload = {
-      orderId: body.orderId || body.id,
+      orderId,
+      ...(userId ? { userId } : {}),
       status: body.status || 'pending',
       updated_at: body.updated_at || new Date().toISOString(),
       ...(typeof body.version === 'number' ? { version: body.version } : {}),
       ...(body.extra || {}),
     }
-    if (payload.orderId) {
-      const existing = orders.get(String(payload.orderId))
-      if (existing && body.mutate !== false) {
-        ;(existing as any).status = payload.status
-        ;(existing as any).updated_at = payload.updated_at
-        orders.set(String(payload.orderId), existing)
-      }
+    if (existing && body.mutate !== false) {
+      ;(existing as any).status = payload.status
+      ;(existing as any).updated_at = payload.updated_at
+      orders.set(String(payload.orderId), existing)
     }
-    emitToAll('order.updated', payload)
+    if (userId) emitToUser(userId, 'order.updated', payload)
     return HttpResponse.json({ ok: true, payload })
   }),
 ]

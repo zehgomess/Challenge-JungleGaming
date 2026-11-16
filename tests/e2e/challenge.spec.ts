@@ -47,6 +47,104 @@ test('session: logout and protected route redirect', async ({ page }) => {
   await expect(page).toHaveURL(/\/login/, { timeout: 15000 })
 })
 
+test('session: switching accounts clears cached favorites and keeps user data isolated', async ({ page }) => {
+  await login(page)
+  await page.goto('/nfts/nft-3')
+  const favorite = page.getByRole('button', { name: /Favoritar|Favoritado/i })
+  await expect(favorite).toHaveText(/Favoritar/i)
+  await favorite.click()
+  await expect(page.getByRole('button', { name: /Favoritado/i })).toBeVisible({ timeout: 15000 })
+
+  const firstOrder = await page.evaluate(async () => {
+    const token = localStorage.getItem('auth_token')
+    const response = await fetch('/api/orders', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        items: [{ nft_id: 'nft-2', edition: 'Gold', quantity: 1, price_at_add: '0.38' }],
+        idempotency_key: `user-one-${Date.now()}`,
+      }),
+    })
+    return response.json()
+  })
+  expect(firstOrder.user_id).toBe('user-1')
+
+  await page.getByRole('button', { name: /Sair/i }).click()
+  await page.getByRole('link', { name: /Cadastro/i }).click()
+  const email = `second-${Date.now()}@jungle.io`
+  await page.getByLabel(/Nome completo/i).fill('Segundo Colecionador')
+  await page.getByLabel(/E-mail/i).fill(email)
+  await page.getByLabel(/^Senha$/i).fill('password456')
+  await page.getByLabel(/Confirmar senha/i).fill('password456')
+  await page.getByRole('button', { name: /Criar conta/i }).click()
+  await expect(page).not.toHaveURL(/\/register/, { timeout: 15000 })
+
+  await page.getByRole('link', { name: /Crypto Jungle #3/i }).first().click()
+  const switchedFavorite = await page.evaluate(async () => {
+    const response = await fetch('/api/nfts/nft-3')
+    return response.json()
+  })
+  expect(switchedFavorite.is_favorited).toBe(false)
+  await expect(page.getByRole('button', { name: /^Favoritar$/i })).toBeVisible({ timeout: 15000 })
+  await expect(page.getByRole('button', { name: /^Favoritado$/i })).toHaveCount(0)
+
+  await page.getByRole('link', { name: /Carteiras/i }).click()
+  await expect(page.getByText(/Nenhuma carteira cadastrada/i)).toBeVisible({ timeout: 15000 })
+
+  await page.evaluate((orderId) =>
+    fetch('/api/__test/order-event', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ orderId, status: 'confirmed' }),
+    }), firstOrder.id)
+  const foreignEvent = await page.evaluate(async () => {
+    const response = await fetch('/api/__test/control', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    return response.json()
+  })
+  expect(foreignEvent.lastBroadcast).toMatchObject({ event: 'order.updated', clients: 0, sent: 0 })
+  await expect(page.getByText(/Pedido confirmado em tempo real/i)).toHaveCount(0)
+
+  const secondOrder = await page.evaluate(async () => {
+    const token = localStorage.getItem('auth_token')
+    const response = await fetch('/api/orders', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        items: [{ nft_id: 'nft-3', edition: 'Platinum', quantity: 1, price_at_add: '0.51' }],
+        idempotency_key: `user-two-${Date.now()}`,
+      }),
+    })
+    return response.json()
+  })
+  expect(secondOrder.user_id).not.toBe(firstOrder.user_id)
+  await page.evaluate((orderId) =>
+    fetch('/api/__test/order-event', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ orderId, status: 'confirmed' }),
+    }), secondOrder.id)
+  const ownEvent = await page.evaluate(async () => {
+    const response = await fetch('/api/__test/control', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    return response.json()
+  })
+  expect(ownEvent.lastBroadcast).toMatchObject({ event: 'order.updated', clients: 1, sent: 1 })
+  await expect(page.getByText(/Pedido confirmado em tempo real/i)).toBeVisible({ timeout: 15000 })
+})
+
 test('cart: invalid/expired coupon feedback and persistence after refresh', async ({ page }) => {
   await page.goto('/nfts/nft-2')
   await expect(page.getByRole('button', { name: /Adicionar ao carrinho/i })).toBeVisible({ timeout: 15000 })

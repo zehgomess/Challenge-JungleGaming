@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
+import { useSession } from '@/store/session'
 
 export const Route = createFileRoute('/wallets')({
   beforeLoad: ({ location }) => {
@@ -18,7 +19,8 @@ export const Route = createFileRoute('/wallets')({
 
 function WalletsPage() {
   const qc = useQueryClient()
-  const { data } = useQuery({ queryKey: ['wallets'], queryFn: () => authApi.wallets() })
+  const { user } = useSession()
+  const { data } = useQuery({ queryKey: ['wallets', user?.id], queryFn: () => authApi.wallets() })
   const wallets = data?.data.wallets ?? []
   const [form, setForm] = useState({ address: '', network: 'Ethereum', label: '', is_primary: false })
   const [editing, setEditing] = useState<string | null>(null)

@@ -8,7 +8,7 @@ const socketHost = typeof window !== 'undefined' ? window.location.host : 'local
 // MSW normalizes Socket.IO's default `/socket.io/` path to `/` before matching.
 export const socketLink = ws.link(`${socketProtocol}//${socketHost}`)
 
-type MockSocket = ReturnType<typeof toSocketIo>
+type MockSocket = ReturnType<typeof toSocketIo> & { userId?: string }
 const clients = new Set<MockSocket>()
 let lastBroadcast: {
   event: string
@@ -35,10 +35,19 @@ export function disconnectSocketClients() {
 }
 
 export function emitToAll(event: string, payload: any) {
+  emitToMatchingClients(event, payload)
+}
+
+export function emitToUser(userId: string, event: string, payload: any) {
+  emitToMatchingClients(event, payload, userId)
+}
+
+function emitToMatchingClients(event: string, payload: any, userId?: string) {
   let sent = 0
   let errors = 0
   let lastError: string | undefined
-  for (const socket of clients) {
+  const recipients = Array.from(clients).filter((socket) => !userId || socket.userId === userId)
+  for (const socket of recipients) {
     try {
       socket.client.emit(event, payload)
       sent += 1
@@ -47,7 +56,7 @@ export function emitToAll(event: string, payload: any) {
       lastError = error instanceof Error ? error.message : String(error)
     }
   }
-  lastBroadcast = { event, clients: clients.size, sent, errors, lastError }
+  lastBroadcast = { event, clients: recipients.length, sent, errors, lastError }
 }
 
 export function getSocketBroadcastDiagnostics() {
@@ -56,8 +65,13 @@ export function getSocketBroadcastDiagnostics() {
 
 export const socketHandlers = [
   socketLink.addEventListener('connection', (connection) => {
-    const socket = toSocketIo(connection)
+    const socket = toSocketIo(connection) as MockSocket
     clients.add(socket)
+    socket.client.on('session:identify', (_event, payload) => {
+      const userId = typeof payload === 'string' ? payload : payload?.userId
+      if (typeof userId === 'string') socket.userId = userId
+      else if (userId === null) delete socket.userId
+    })
     connection.client.addEventListener('close', () => {
       clients.delete(socket)
     })

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { useSession } from '@/store/session'
 
 type HomeSearch = {
   search?: string
@@ -39,11 +40,12 @@ export const Route = createFileRoute('/')({
 
 function Home() {
   const navigate = useNavigate()
+  const { user } = useSession()
   const searchState = Route.useSearch()
   const { search = '', edition, availability, sort = 'recent', order = 'desc', page = 1 } = searchState
 
   const query = useQuery({
-    queryKey: ['nfts', { search, edition, availability, sort, order, page }],
+    queryKey: ['nfts', user?.id ?? 'anonymous', { search, edition, availability, sort, order, page }],
     queryFn: ({ signal }) =>
       nftApi.list({ search: search || undefined, edition, availability, sort, order, page, limit: 8 } as any, {
         signal,

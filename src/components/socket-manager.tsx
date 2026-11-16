@@ -6,10 +6,11 @@ import { useSession } from '@/store/session'
 
 export function SocketManager() {
   const qc = useQueryClient()
-  const { isAuthenticated } = useSession()
+  const { isAuthenticated, user } = useSession()
   const seen = useRef<Map<string, string>>(new Map())
 
   useEffect(() => {
+    seen.current.clear()
     const socket = connectSocket()
 
     const isNewer = (entityKey: string, version?: number, ts?: string) => {
@@ -39,7 +40,7 @@ export function SocketManager() {
       recordSocketEvent('nft.updated')
       const entityKey = `nft:${payload.id}`
       if (!isNewer(entityKey, payload?.version, payload?.updated_at)) return
-      qc.invalidateQueries({ queryKey: ['nft', payload.id] })
+      qc.invalidateQueries({ queryKey: ['nft'] })
       qc.invalidateQueries({ queryKey: ['nfts'] })
       qc.invalidateQueries({ queryKey: ['cart'] })
       qc.invalidateQueries({ queryKey: ['cartQuote'] })
@@ -47,20 +48,22 @@ export function SocketManager() {
       toast.message('Atualização em tempo real: NFT atualizado (preço/disponibilidade).')
     }
 
-    const onOrderUpdated = (payload: any) => {
-      const id = payload?.orderId || payload?.id
-      if (!id) return
-      recordSocketEvent('order.updated')
+  const onOrderUpdated = (payload: any) => {
+    const id = payload?.orderId || payload?.id
+    if (!id) return
+    if (payload?.userId && payload.userId !== user?.id) return
+    recordSocketEvent('order.updated')
       const entityKey = `order:${id}`
       if (!isNewer(entityKey, payload?.version, payload?.updated_at)) return
-      qc.invalidateQueries({ queryKey: ['order', id] })
+      qc.invalidateQueries({ queryKey: ['order', user?.id ?? 'anonymous', id] })
       qc.invalidateQueries({ queryKey: ['orders'] })
       if (payload?.status === 'confirmed') toast.success('Pedido confirmado em tempo real.')
       else if (payload?.status === 'refused' || payload?.status === 'cancelled') toast.error('Pedido recusado/cancelado em tempo real.')
-      else toast.message('Status do pedido atualizado.')
+      else if (payload?.status !== 'pending') toast.message('Status do pedido atualizado.')
     }
 
     const onConnect = () => {
+      socket.emit('session:identify', { userId: user?.id ?? null })
       // Reconcile active resources with REST after reconnect
       qc.invalidateQueries({ queryKey: ['nfts'] })
       qc.invalidateQueries({ queryKey: ['nft'] })
@@ -71,6 +74,7 @@ export function SocketManager() {
     socket.on('connect', onConnect)
     socket.on('nft.updated', onNftUpdated)
     socket.on('order.updated', onOrderUpdated)
+    if (socket.connected) socket.emit('session:identify', { userId: user?.id ?? null })
 
     return () => {
       socket.off('connect', onConnect)
@@ -78,7 +82,7 @@ export function SocketManager() {
       socket.off('order.updated', onOrderUpdated)
       // keep connection for app lifetime in this simple impl; cleanup on full unmount not critical
     }
-  }, [qc, isAuthenticated])
+  }, [qc, isAuthenticated, user?.id])
 
   useEffect(() => {
     return () => {

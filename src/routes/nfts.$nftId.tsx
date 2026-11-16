@@ -17,11 +17,14 @@ function NftDetail() {
   const { nftId } = Route.useParams()
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const { isAuthenticated } = useSession()
+  const { isAuthenticated, user } = useSession()
+  const queryUserId = user?.id ?? 'anonymous'
+  const nftQueryKey = ['nft', queryUserId, nftId]
+  const nftListQueryKey = ['nfts', queryUserId]
   const { addItem } = useCart()
 
   const query = useQuery({
-    queryKey: ['nft', nftId],
+    queryKey: nftQueryKey,
     queryFn: ({ signal }) => nftApi.get(nftId, { signal } as any),
   })
 
@@ -31,15 +34,15 @@ function NftDetail() {
       return fav ? nftApi.favorite(nftId) : nftApi.unfavorite(nftId)
     },
     onMutate: async (fav: boolean) => {
-      await qc.cancelQueries({ queryKey: ['nft', nftId] })
-      const prevNft = qc.getQueryData(['nft', nftId])
-      const prevList = qc.getQueriesData({ queryKey: ['nfts'] })
-      qc.setQueryData(['nft', nftId], (old: any) => {
+      await qc.cancelQueries({ queryKey: nftQueryKey })
+      const prevNft = qc.getQueryData(nftQueryKey)
+      const prevList = qc.getQueriesData({ queryKey: nftListQueryKey })
+      qc.setQueryData(nftQueryKey, (old: any) => {
         if (!old) return old
         const data = old.data ? { ...old.data, is_favorited: fav } : old
         return old.data ? { ...old, data } : data
       })
-      qc.setQueriesData({ queryKey: ['nfts'] }, (old: any) => {
+      qc.setQueriesData({ queryKey: nftListQueryKey }, (old: any) => {
         const items = old?.data?.data ?? old?.data?.items
         if (!Array.isArray(items)) return old
         const nextItems = items.map((it: any) => (it?.id === nftId ? { ...it, is_favorited: fav } : it))
@@ -50,7 +53,7 @@ function NftDetail() {
       return { prevNft, prevList }
     },
     onError: (e: any, _fav, ctx) => {
-      if (ctx?.prevNft) qc.setQueryData(['nft', nftId], ctx.prevNft)
+      if (ctx?.prevNft) qc.setQueryData(nftQueryKey, ctx.prevNft)
       if (ctx?.prevList) for (const [key, data] of ctx.prevList) qc.setQueryData(key, data)
       if (e?.message === 'AUTH_REQUIRED') {
         toast.error('Faça login para favoritar')
@@ -60,8 +63,8 @@ function NftDetail() {
       toast.error('Não foi possível atualizar favorito')
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ['nft', nftId] })
-      qc.invalidateQueries({ queryKey: ['nfts'] })
+      qc.invalidateQueries({ queryKey: nftQueryKey })
+      qc.invalidateQueries({ queryKey: nftListQueryKey })
     },
   })
   if (query.isLoading) {

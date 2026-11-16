@@ -67,6 +67,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = (t: string, u: User) => {
+    const previousUserId = user?.id ?? readStoredSession().user?.id
+    // Treat every successful login as an auth boundary, including a fresh
+    // login after logout where the previous in-memory identity is already null.
+    queryClient.clear()
+    if (previousUserId && previousUserId !== u.id) window.dispatchEvent(new Event('auth-user-changed'))
     setToken(t)
     setUser(u)
     localStorage.setItem(TOKEN_KEY, t)

@@ -61,6 +61,7 @@ export interface CartQuote {
 
 export interface Order {
   id: string
+  user_id?: string
   status: 'pending' | 'confirmed' | 'refused' | 'cancelled'
   items: CartItem[]
   subtotal: string
