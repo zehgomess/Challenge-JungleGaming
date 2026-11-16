@@ -108,3 +108,22 @@ test('loading states: skeleton/placeholder appears during slow catalog load', as
   await expect(page.getByRole('heading', { name: /Marketplace de NFTs/i })).toBeVisible({ timeout: 15000 })
 })
 
+
+test('cart: visitor items and coupon are preserved after authentication', async ({ page }) => {
+  await page.goto('/nfts/nft-2')
+  await expect(page.getByRole('button', { name: /Adicionar ao carrinho/i })).toBeVisible({ timeout: 15000 })
+  await page.getByRole('button', { name: /Adicionar ao carrinho/i }).click()
+
+  await page.goto('/cart')
+  await expect(page.getByText(/Crypto Jungle #2/i).first()).toBeVisible({ timeout: 15000 })
+  await page.getByPlaceholder(/digo do cupom/i).fill('JUNGLE20')
+  await page.getByRole('button', { name: /^Aplicar$/i }).click()
+  await expect(page.getByText(/aplicado com sucesso|Cupom aplicado/i).first()).toBeVisible({ timeout: 15000 })
+
+  await login(page)
+  await page.goto('/cart')
+  await expect(page.getByText(/Crypto Jungle #2/i).first()).toBeVisible({ timeout: 15000 })
+  await expect(page.getByText(/Resumo/i)).toBeVisible({ timeout: 15000 })
+  // coupon should be preserved/merged (best-effort)
+  await expect(page.getByText(/aplicado com sucesso|Cupom aplicado|JUNGLE20/i).first()).toBeVisible({ timeout: 15000 })
+})
