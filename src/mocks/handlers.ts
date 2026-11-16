@@ -1,5 +1,6 @@
 import { http, HttpResponse, delay } from 'msw'
 import type { NFT, NFTListResponse, User, Order } from '@/types'
+import { emitToAll } from './socket'
 
 const editions = ['Standard', 'Gold', 'Platinum'] as const
 
@@ -191,6 +192,10 @@ export const handlers = [
         const nft = NFTS.find((n) => n.id === it.nft_id)
         if (!nft) return null
         const qty = Math.max(0, Math.min(it.quantity || 0, nft.availability))
+        // simulate availability impact on order creation (pending reservation) and emit update
+        nft.availability = Math.max(0, nft.availability - qty)
+        nft.updated_at = new Date().toISOString()
+        emitToAll('nft.updated', { id: nft.id, price: nft.price, availability: nft.availability, updated_at: nft.updated_at })
         return {
           nft_id: nft.id,
           edition: nft.edition,
@@ -226,6 +231,7 @@ export const handlers = [
       updated_at: new Date().toISOString(),
     }
     orders.set(order.id, order)
+    emitToAll('order.updated', { orderId: order.id, status: order.status, updated_at: order.updated_at })
     return HttpResponse.json(order)
   }),
 
@@ -257,9 +263,10 @@ export const handlers = [
       existing.transaction_hash = existing.transaction_hash || `0x${id.replace(/[^a-z0-9]/gi, '')}abcd`
       existing.updated_at = new Date().toISOString()
       orders.set(id, existing)
+      emitToAll('order.updated', { orderId: id, status: existing.status, updated_at: existing.updated_at })
       return HttpResponse.json(existing)
     }
-    const fallback: Order = {
+    const fallback: any = {
       id,
       status: 'confirmed',
       items: [],
@@ -272,6 +279,7 @@ export const handlers = [
       updated_at: new Date().toISOString(),
     }
     orders.set(id, fallback)
+    emitToAll('order.updated', { orderId: id, status: fallback.status, updated_at: fallback.updated_at })
     return HttpResponse.json(fallback)
   }),
 

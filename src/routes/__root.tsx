@@ -3,6 +3,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from '@/store/query'
 import { NavBar } from '@/components/navbar'
 import { Sonner } from '@/components/ui/sonner'
+import { SocketManager } from '@/components/socket-manager'
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -17,6 +18,7 @@ function RootComponent() {
           <Outlet />
         </main>
         <Sonner />
+        <SocketManager />
       </div>
     </QueryClientProvider>
   )

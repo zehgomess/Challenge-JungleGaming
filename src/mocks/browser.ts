@@ -1,7 +1,8 @@
 import { setupWorker } from 'msw/browser'
 import { handlers } from './handlers'
+import { socketHandlers } from './socket'
 
-export const worker = setupWorker(...handlers)
+export const worker = setupWorker(...handlers, ...socketHandlers)
 
 // Enable mocking in dev by default, or when explicitly set
 export async function enableMocking() {
