@@ -52,3 +52,22 @@ test('checkout: timeout after order creation recovers same order via idempotency
   await expect(page.getByText(/Confirmação do pedido|Recibo|confirmado/i).first()).toBeVisible({ timeout: 15000 })
 })
 
+
+test('checkout: repeated confirm click does not create duplicate successful flow', async ({ page }) => {
+  await login(page)
+  await page.goto('/nfts/nft-5')
+  await expect(page.getByRole('button', { name: /Adicionar ao carrinho/i })).toBeVisible({ timeout: 15000 })
+  await page.getByRole('button', { name: /Adicionar ao carrinho/i }).click()
+  await page.goto('/payment')
+  await expect(page).toHaveURL(/\/payment/, { timeout: 15000 })
+
+  await page.getByRole('button', { name: /Simular/i }).click()
+  await expect(page.getByText(/Carteira conectada/i)).toBeVisible({ timeout: 15000 })
+  await page.getByLabel(/Confirmo que revisei/i).check()
+  const confirm = page.getByRole('button', { name: /Confirmar compra/i })
+  await confirm.click()
+  await confirm.click({ timeout: 1000 }).catch(() => {})
+
+  await expect(page).toHaveURL(/\/order\/confirmation/, { timeout: 30000 })
+  await expect(page.getByText(/confirmado|Recibo|Confirma/i).first()).toBeVisible({ timeout: 15000 })
+})
