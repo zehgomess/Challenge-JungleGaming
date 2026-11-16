@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test:e2e": "playwright test",
-    "lighthouse:audit": "lighthouse --preset=desktop --output=html --output-path=./reports/lighthouse-desktop.html && lighthouse --preset=desktop --output=html --output-path=./reports/lighthouse-detail.html",
+    "test:e2e:ui": "playwright test --ui",
+    "lighthouse:audit": "node scripts/lighthouse-audit.mjs",
     "test:unit": "vitest run"
   },
   "dependencies": {

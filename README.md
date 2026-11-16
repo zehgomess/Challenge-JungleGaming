@@ -1,75 +1,87 @@
-# React + TypeScript + Vite
+# Jungle Gaming Frontend Challenge
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Implementação do desafio: https://github.com/junglegaming/frontend-challenge
 
-Currently, two official plugins are available:
+## Stack
+- React 19 + TypeScript + Vite
+- Tailwind CSS + shadcn/ui (Radix)
+- TanStack Router + TanStack Query
+- React Hook Form + Zod
+- Axios
+- MSW (+ `@mswjs/socket.io-binding`)
+- Socket.IO Client
+- Playwright (E2E/visual - estrutura)
+- Lighthouse (auditoria - estrutura)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+## Setup
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+## Variáveis de ambiente
+- `VITE_API_URL` (opcional): base da API REST. Padrão: `/api` (compatível com MSW).
+- `VITE_MSW_MODE` (opcional): `off` desativa mocks; `mock`/`on` força mocks; em `DEV` os mocks são iniciados por padrão.
+- `VITE_WS_URL` (opcional): origem do Socket.IO. Padrão: `window.location.origin`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+> O projeto foi preparado para operar com camada mockada (REST + eventos Socket.IO simulados) no ambiente de desenvolvimento/demo.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Credenciais fictícias
+- **E-mail:** `collector@jungle.io`
+- **Senha:** `password123`
 
+(Conflito de cadastro simulado: `existing@jungle.io`)
+
+## Execução
+```bash
+# desenvolvimento
+npm run dev
+
+# typecheck
+npm run typecheck
+
+# build de produção
+npm run build
+
+# preview do build
+npm run preview
 ```
+
+## Cenários simulados (MSW) e reset
+- Catálogo com busca/filtros/ordenação/paginação, detalhe, favoritos por usuário autenticado.
+- Carrinho com quote (subtotal/desconto/taxa/total) e cupons: `JUNGLE20` (20%), `EXPIRED` (expirado), outros inválidos.
+- Checkout/pedido com criação, confirmação, idempotência básica e eventos `order.updated`/`nft.updated` via binding Socket.IO.
+- Perfil/carteiras e validações de senha (senha atual fictícia: `password123`).
+
+**Reset de estado:**
+- Recarregue a página para reinicializar o worker/estado em memória do MSW.
+- Limpe `localStorage`/`sessionStorage` do domínio para resetar sessão, carrinho e retomadas (`auth_token`, `auth_user`, `cart:*`, `auth_resume_to`, etc.).
+
+## Fluxos implementados
+- Rotas: home, detalhe NFT, carrinho, pagamento, confirmação de pedido, login, registro, perfil, carteiras.
+- Proteção de fluxos privados com redirecionamento e `returnTo`.
+- Sessão persistente (refresh), tratamento de expiração (401/evento) com tentativa de retomada.
+- Catálogo/detalhe com estados loading/empty/error/success e parâmetros na URL.
+- Carrinho com persistência/merge visitante→usuário, cupom e totais via API mock.
+- Pagamento/confirmação com revisão, simulação de carteira/rede, revalidação pré-confirmação, idempotência e recibo snapshot.
+- Perfil e carteiras com validações e persistência via mock.
+- Sincronização real-time inicial via `socket.io-client` consumindo eventos emitidos pela camada MSW (`@mswjs/socket.io-binding`).
+
+## Reprodução de fluxos de falha (exemplos)
+- **Login inválido:** usar credenciais diferentes das fictícias.
+- **Registro conflito:** usar `existing@jungle.io`.
+- **Cupom inválido/expirado:** aplicar `INVALIDO` ou `EXPIRED` no carrinho.
+- **Conexão de carteira recusada (simulada):** selecionar rede `Polygon` no pagamento e simular conexão.
+- **Mudança de condições no checkout:** alterar cupom/itens para gerar diferença de quote e exigir nova revisão.
+- **Sessão expirada:** remover token/forçar 401 em chamadas autenticadas; fluxo redireciona para login com retomada.
+
+## Testes e qualidade (estado)
+- Scripts/configurações para Playwright e Lighthouse estão previstos no `package.json`; a suíte completa de cenários, baselines visuais versionadas e relatórios finais devem ser executados/gerados no ambiente de avaliação conforme os requisitos do desafio.
+- Diretório `reports/` reservado para artefatos de auditoria/testes.
+
+## Deploy
+- Preparado para deploy estático (Vite build) com rewrite SPA (`vercel.json`).
+- **Obrigatório pelo desafio:** publicar URL pública (Vercel/Netlify/Cloudflare Pages) correspondente ao código commitado, com mocks e real-time funcionando em produção e suporte a acesso direto/refresh de rotas.
+
+## Limitações conhecidas
+- Implementação incremental: algumas exigências avançadas (cenários E2E/visual completos, relatórios Lighthouse consolidados, reconciliação real-time abrangente e determinismo total de eventos/casos de borda) podem requerer complementação adicional para conformidade integral com todos os critérios eliminatórios do desafio.
+- Socket.IO mockado via binding em ambiente browser/MSW; comportamento depende do cenário e da inicialização do worker.
