@@ -149,6 +149,27 @@ export const handlers = [
     if (!userId) return new HttpResponse(null, { status: 401 })
     return HttpResponse.json(MOCK_USER)
   }),
+  http.patch('/api/auth/profile', async ({ request }) => {
+    const userId = getUserId(request)
+    if (!userId) return new HttpResponse(null, { status: 401 })
+    const body = (await request.json()) as Partial<User>
+    Object.assign(MOCK_USER, body, { updated_at: new Date().toISOString() } as any)
+    await delay(200)
+    return HttpResponse.json(MOCK_USER)
+  }),
+  http.post('/api/auth/change-password', async ({ request }) => {
+    const userId = getUserId(request)
+    if (!userId) return new HttpResponse(null, { status: 401 })
+    const body = (await request.json()) as { currentPassword?: string; newPassword?: string }
+    await delay(200)
+    if (body.currentPassword !== 'password123') {
+      return HttpResponse.json({ message: 'Senha atual incorreta' }, { status: 400 })
+    }
+    if (!body.newPassword || body.newPassword.length < 6) {
+      return HttpResponse.json({ message: 'Nova senha inválida' }, { status: 400 })
+    }
+    return HttpResponse.json({ success: true })
+  }),
 
   http.post('/api/orders', async ({ request }) => {
     const body = (await request.json()) as {
@@ -327,12 +348,24 @@ export const handlers = [
     if (!userId) return new HttpResponse(null, { status: 401 })
     const body = (await request.json()) as any
     const list = walletsByUser.get(userId) ?? []
-    const wallet = { id: `w-${Date.now()}`, ...body }
+    const wallet = { id: `w-${Date.now()}`, is_primary: false, ...body }
     if (wallet.is_primary) {
       for (const w of list) w.is_primary = false
     }
     list.push(wallet)
     walletsByUser.set(userId, list)
     return HttpResponse.json({ success: true, wallet })
+  }),
+  http.patch('/api/auth/wallets/:id', async ({ request, params }) => {
+    const userId = getUserId(request)
+    if (!userId) return new HttpResponse(null, { status: 401 })
+    const body = (await request.json()) as any
+    const list = walletsByUser.get(userId) ?? []
+    const idx = list.findIndex((w) => w.id === params.id)
+    if (idx === -1) return new HttpResponse(null, { status: 404 })
+    if (body.is_primary) for (const w of list) w.is_primary = false
+    list[idx] = { ...list[idx], ...body }
+    walletsByUser.set(userId, list)
+    return HttpResponse.json({ success: true, wallet: list[idx] })
   }),
 ]

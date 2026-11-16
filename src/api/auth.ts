@@ -32,4 +32,7 @@ export const authApi = {
 
   addWallet: (wallet: { address: string; network: string; is_primary?: boolean; label?: string }) =>
     api.post('/auth/wallets', wallet),
+
+  updateWallet: (id: string, wallet: { address?: string; network?: string; is_primary?: boolean; label?: string }) =>
+    api.patch(`/auth/wallets/${id}`, wallet),
 }
