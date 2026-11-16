@@ -11,6 +11,10 @@ export const socketLink = ws.link(`${socketProtocol}//${socketHost}`)
 type MockSocket = ReturnType<typeof toSocketIo>
 const clients = new Set<MockSocket>()
 
+export function getSocketClientCount() {
+  return clients.size
+}
+
 export function emitToAll(event: string, payload: any) {
   for (const socket of clients) {
     try {

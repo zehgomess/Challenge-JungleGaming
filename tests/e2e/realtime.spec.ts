@@ -20,6 +20,43 @@ async function emitNftUpdate(page: Page, payload: any) {
   )
 }
 
+test('socket: MSW has an active Socket.IO client on the current origin', async ({ page }) => {
+  const diagnostics: string[] = []
+  let socketState = ''
+  page.on('console', (message) => {
+    if (message.type() === 'error') diagnostics.push(`console: ${message.text()}`)
+  })
+  page.on('websocket', (socket) => {
+    diagnostics.push(`websocket: ${socket.url()}`)
+    socket.on('socketerror', (error) => diagnostics.push(`socketerror: ${error}`))
+    socket.on('close', () => diagnostics.push('websocket closed'))
+  })
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: /Marketplace de NFTs/i })).toBeVisible({
+    timeout: 15000,
+  })
+  try {
+    await expect.poll(
+      async () => {
+        socketState = await page.evaluate(async () => {
+        const response = await fetch('/api/__test/control', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({}),
+        })
+          return response.text()
+        })
+        return JSON.parse(socketState).connectedClients as number
+      },
+      { timeout: 15000 },
+    ).toBeGreaterThan(0)
+  } catch (error) {
+    throw new Error(
+      `Socket.IO diagnostics: ${socketState}\n${diagnostics.join('\n')}\n${String(error)}`,
+    )
+  }
+})
+
 test('socket: nft price/availability update reflected in cart summary', async ({ page }) => {
   await page.goto('/nfts/nft-2')
   await expect(page.getByRole('button', { name: /Adicionar ao carrinho/i })).toBeVisible({ timeout: 15000 })

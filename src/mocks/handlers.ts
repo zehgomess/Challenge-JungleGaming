@@ -1,6 +1,6 @@
 import { http, HttpResponse, delay } from 'msw'
 import type { NFT, NFTListResponse, User, Order } from '@/types'
-import { emitToAll } from './socket'
+import { emitToAll, getSocketClientCount } from './socket'
 
 const editions = ['Standard', 'Gold', 'Platinum'] as const
 
@@ -427,7 +427,11 @@ export const handlers = [
     if (typeof body.favoriteFail === 'number') testControls.favoriteFail = body.favoriteFail
     if (typeof body.orderCreateTimeout === 'number') testControls.orderCreateTimeout = body.orderCreateTimeout
     if (typeof body.orderCreateFail === 'number') testControls.orderCreateFail = body.orderCreateFail
-    return HttpResponse.json({ ok: true, testControls: { ...testControls } })
+    return HttpResponse.json({
+      ok: true,
+      testControls: { ...testControls },
+      connectedClients: getSocketClientCount(),
+    })
   }),
   http.post('/api/__test/nft-update', async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as any
