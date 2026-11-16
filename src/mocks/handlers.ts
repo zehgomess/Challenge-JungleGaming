@@ -40,7 +40,15 @@ const walletsByUser = new Map<string, any[]>([
   ['user-1', [{ id: 'w1', address: '0xabc123def4567890abc123def4567890abcd', network: 'Ethereum', is_primary: true, label: 'Principal' }]],
 ])
 
+const testControls = {
+  favoriteFail: 0,
+  auth401: false,
+  orderCreateTimeout: 0,
+  orderCreateFail: 0,
+}
+
 function getUserId(request: Request) {
+  if (testControls.auth401) return null
   const auth = request.headers.get('authorization') || ''
   if (auth.includes('mock-token')) return 'user-1'
   return null
@@ -108,6 +116,11 @@ export const handlers = [
   http.post('/api/nfts/:id/favorite', async ({ params, request }) => {
     const userId = getUserId(request)
     if (!userId) return new HttpResponse(null, { status: 401 })
+    if (testControls.favoriteFail > 0) {
+      testControls.favoriteFail -= 1
+      await delay(150)
+      return HttpResponse.json({ message: 'Falha simulada' }, { status: 500 })
+    }
     const set = favoritesByUser.get(userId) ?? new Set<string>()
     set.add(String(params.id))
     favoritesByUser.set(userId, set)
@@ -118,6 +131,11 @@ export const handlers = [
   http.delete('/api/nfts/:id/favorite', async ({ params, request }) => {
     const userId = getUserId(request)
     if (!userId) return new HttpResponse(null, { status: 401 })
+    if (testControls.favoriteFail > 0) {
+      testControls.favoriteFail -= 1
+      await delay(150)
+      return HttpResponse.json({ message: 'Falha simulada' }, { status: 500 })
+    }
     const set = favoritesByUser.get(userId) ?? new Set<string>()
     set.delete(String(params.id))
     favoritesByUser.set(userId, set)
@@ -182,12 +200,19 @@ export const handlers = [
       wallet_id?: string
       network?: string
     }
-    await delay(400)
+    const shouldTimeout = testControls.orderCreateTimeout > 0
+    const shouldFail = testControls.orderCreateFail > 0
+    if (shouldTimeout) testControls.orderCreateTimeout -= 1
+    if (shouldFail) testControls.orderCreateFail -= 1
+
     if (body.idempotency_key) {
       for (const o of orders.values()) {
-        if ((o as any).idempotency_key === body.idempotency_key) return HttpResponse.json(o)
+        if ((o as any).idempotency_key === body.idempotency_key) {
+          return HttpResponse.json(o)
+        }
       }
     }
+    await delay(400)
 
     const quoteItems = (body.items ?? [])
       .map((it: any) => {
@@ -224,6 +249,10 @@ export const handlers = [
     const networkFeeNum = subtotalNum > 0 ? 0.01 : 0
     const totalNum = Math.max(0, subtotalNum - discountNum + networkFeeNum)
 
+    if (shouldFail) {
+      return HttpResponse.json({ message: 'Falha simulada ao criar pedido' }, { status: 500 })
+    }
+
     const order: any = {
       id: `order-${Date.now()}`,
       status: 'pending',
@@ -241,6 +270,11 @@ export const handlers = [
     }
     orders.set(order.id, order)
     emitToAll('order.updated', { orderId: order.id, status: order.status, updated_at: order.updated_at })
+    if (shouldTimeout) {
+      // simulate timeout after server-side creation to allow idempotent recovery on retry
+      await delay(500)
+      return HttpResponse.json({ message: 'Timeout simulado', orderId: order.id }, { status: 504 })
+    }
     return HttpResponse.json(order)
   }),
 
@@ -387,6 +421,14 @@ export const handlers = [
   }),
 
   // Test-control helpers (mock/demo determinism)
+  http.post('/api/__test/control', async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as any
+    if (Object.prototype.hasOwnProperty.call(body, 'auth401')) testControls.auth401 = !!body.auth401
+    if (typeof body.favoriteFail === 'number') testControls.favoriteFail = body.favoriteFail
+    if (typeof body.orderCreateTimeout === 'number') testControls.orderCreateTimeout = body.orderCreateTimeout
+    if (typeof body.orderCreateFail === 'number') testControls.orderCreateFail = body.orderCreateFail
+    return HttpResponse.json({ ok: true, testControls: { ...testControls } })
+  }),
   http.post('/api/__test/nft-update', async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as any
     const nft = NFTS.find((n) => n.id === body.id)

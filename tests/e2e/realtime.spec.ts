@@ -9,7 +9,15 @@ async function login(page: Page) {
 }
 
 async function emitNftUpdate(page: Page, payload: any) {
-  await page.request.post('/api/__test/nft-update', { data: payload })
+  await page.evaluate(
+    (data) =>
+      fetch('/api/__test/nft-update', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(data),
+      }),
+    payload,
+  )
 }
 
 test('socket: nft price/availability update reflected in cart summary', async ({ page }) => {
