@@ -76,7 +76,7 @@ npm run preview
 - **Sessão expirada:** remover token/forçar 401 em chamadas autenticadas; fluxo redireciona para login com retomada.
 
 ## Testes e qualidade (executado)
-- **Playwright (E2E/visual):** suíte executável em `tests/e2e/`; **82/82 testes passaram** no último run local (`workers: 1`): fluxos funcionais em Chromium desktop (1440px) e mobile (390px), mais regressão visual em tablet (768px). Inclui sessão/troca de conta, retry, quote, reconexão/pedido pendente, histórico e validação por teclado. Baselines para **home, detalhe, carrinho e pagamento** estão em `tests/e2e/visual.spec.ts-snapshots/`.
+- **Playwright (E2E/visual):** suíte executável em `tests/e2e/`; **82/82 testes passaram** no último run, com fluxos em desktop 1440px/mobile 390px e regressão visual em tablet 768px (`workers: 1`). Inclui sessão/troca de conta, retry, quote, reconexão/pedido pendente, histórico, abort explícito de busca obsoleta e validação por teclado. Baselines para **home, detalhe, carrinho e pagamento** estão em `tests/e2e/visual.spec.ts-snapshots/`.
 - **Lighthouse:** 3 runs por cenário para home/detalhe desktop/mobile estão versionados em `reports/lighthouse/` (preview) e `reports/lighthouse-production/` (Vercel). Resumos: `reports/lighthouse/SUMMARY.md` e `reports/lighthouse-production/SUMMARY.md`.
 - **Lighthouse produção (medianas):** home desktop 1.00 / mobile 0.80; detalhe desktop 1.00 / mobile 0.81. CLS de detalhe 0.010 desktop / 0.036 mobile. LCP mobile permanece ~3.8 s e deve ser comparado com o alvo do enunciado; relatórios contêm LCP/TBT e diagnósticos.
 - **Acessibilidade/SEO:** `lang="pt-BR"`, erros de formulário associados e anunciados, wallet address validado; última auditoria Lighthouse production: accessibility/best-practices/SEO 100/100/100.

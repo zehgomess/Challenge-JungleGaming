@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useQuery, keepPreviousData } from '@tanstack/react-query'
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { nftApi } from '@/api/nfts'
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -40,12 +40,14 @@ export const Route = createFileRoute('/')({
 
 function Home() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { user } = useSession()
+  const queryUserId = user?.id ?? 'anonymous'
   const searchState = Route.useSearch()
   const { search = '', edition, availability, sort = 'recent', order = 'desc', page = 1 } = searchState
 
   const query = useQuery({
-    queryKey: ['nfts', user?.id ?? 'anonymous', { search, edition, availability, sort, order, page }],
+    queryKey: ['nfts', queryUserId, { search, edition, availability, sort, order, page }],
     queryFn: ({ signal }) =>
       nftApi.list({ search: search || undefined, edition, availability, sort, order, page, limit: 8 } as any, {
         signal,
@@ -54,6 +56,7 @@ function Home() {
   })
 
   const updateSearch = (patch: Partial<HomeSearch>, resetPage = true) => {
+    void queryClient.cancelQueries({ queryKey: ['nfts', queryUserId] })
     navigate({
       to: '/',
       search: (prev) => ({

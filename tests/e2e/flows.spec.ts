@@ -38,7 +38,13 @@ test('catalog browser history restores prior URL filters and search state', asyn
   await expect(page.getByLabel(/Busca/i)).toHaveValue('')
 })
 
-test('catalog ignores an older slow search response and keeps the newest URL result', async ({ page }) => {
+test('catalog cancels an older slow search and keeps the newest URL result', async ({ page }) => {
+  const abortedRequests: string[] = []
+  page.on('requestfailed', (request) => {
+    if (new URL(request.url()).searchParams.get('search') === 'Crypto Jungle #2') {
+      abortedRequests.push(request.failure()?.errorText || 'failed')
+    }
+  })
   await page.goto('/')
   await expect(page.getByRole('heading', { name: /Marketplace de NFTs/i })).toBeVisible()
   await page.evaluate(() =>
@@ -48,7 +54,7 @@ test('catalog ignores an older slow search response and keeps the newest URL res
       body: JSON.stringify({
         resetListQueryDiagnostics: true,
         nftListDelayBySearch: {
-          'crypto jungle #2': 1500,
+          'crypto jungle #2': 4000,
           'crypto jungle #3': 20,
         },
       }),
@@ -88,6 +94,10 @@ test('catalog ignores an older slow search response and keeps the newest URL res
         return status.listQueryDiagnostics.completed['crypto jungle #2'] ?? 0
       }),
   ).toBeGreaterThan(0)
+  expect(
+    abortedRequests.some((failure) => failure.toLowerCase().includes('abort')),
+    `Expected the stale search request to abort; observed: ${abortedRequests.join(', ')}`,
+  ).toBeTruthy()
   await expect(page.getByRole('link', { name: /Crypto Jungle #2/i })).toHaveCount(0)
 })
 
