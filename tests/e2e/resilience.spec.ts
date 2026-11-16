@@ -33,3 +33,22 @@ test('session: expired/cleared session redirects to login on protected route', a
   await expect(page).toHaveURL(/\/login/, { timeout: 15000 })
 })
 
+test('checkout: timeout after order creation recovers same order via idempotency', async ({ page }) => {
+  await login(page)
+  await page.goto('/nfts/nft-4')
+  await expect(page.getByRole('button', { name: /Adicionar ao carrinho/i })).toBeVisible({ timeout: 15000 })
+  await page.getByRole('button', { name: /Adicionar ao carrinho/i }).click()
+  await page.goto('/payment')
+  await expect(page).toHaveURL(/\/payment/, { timeout: 15000 })
+
+  await page.evaluate(() => fetch('/api/__test/control', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ orderCreateTimeout: 1 }) }))
+
+  await page.getByRole('button', { name: /Simular conexão/i }).click()
+  await expect(page.getByText(/Carteira conectada/i)).toBeVisible({ timeout: 15000 })
+  await page.getByLabel(/Confirmo que revisei/i).check()
+  await page.getByRole('button', { name: /Confirmar compra/i }).click()
+
+  await expect(page).toHaveURL(/\/order\/confirmation/, { timeout: 30000 })
+  await expect(page.getByText(/Confirmação do pedido|Recibo|confirmado/i).first()).toBeVisible({ timeout: 15000 })
+})
+

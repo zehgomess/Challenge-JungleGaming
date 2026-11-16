@@ -76,6 +76,7 @@ function PaymentPage() {
   const handleConfirm = async () => {
     if (!canSubmit || !quote) return
     setSubmitting(true)
+    let idempotencyKey = ''
     try {
       // Revalidate price/availability/coupon/fees before confirming
       const fresh = await cartApi.quote(items, couponCode)
@@ -93,30 +94,44 @@ function PaymentPage() {
         return
       }
 
-      const idempotencyKey = `idem-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      const pendingRaw = sessionStorage.getItem('pending_checkout')
+      const pending = pendingRaw ? (JSON.parse(pendingRaw) as { idempotencyKey?: string }) : null
+      idempotencyKey = pending?.idempotencyKey || `idem-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
       sessionStorage.setItem('pending_checkout', JSON.stringify({ idempotencyKey, at: Date.now() }))
 
-      const created = await orderApi.create({
+      const createPayload = {
         items,
         coupon_code: freshQ.coupon_code || couponCode,
         wallet_id: selectedWallet,
         network,
         idempotency_key: idempotencyKey,
-      })
-      const order = created.data
+      }
+
+      let order
+      try {
+        const created = await orderApi.create(createPayload)
+        order = created.data
+      } catch (err) {
+        // Recovery path: timeout/failure after possible server-side creation
+        const recovered = await orderApi.create(createPayload)
+        order = recovered.data
+        toast.message('Recuperando pedido pendente com a mesma tentativa...')
+      }
       sessionStorage.setItem('pending_order_id', order.id)
 
       const confirmed = await orderApi.confirm(order.id, { idempotency_key: idempotencyKey })
-      if (confirmed.data.status === 'confirmed') {
-        removePurchased(order.items.map((i: any) => ({ nft_id: i.nft_id, edition: i.edition, quantity: i.quantity })))
+      const finalOrder = confirmed.data
+      if (finalOrder.status === 'confirmed') {
+        removePurchased((finalOrder.items || order.items || []).map((i: any) => ({ nft_id: i.nft_id, edition: i.edition, quantity: i.quantity })))
         sessionStorage.removeItem('pending_order_id')
         sessionStorage.removeItem('pending_checkout')
-        navigate({ to: '/order/confirmation', search: { orderId: confirmed.data.id } })
+        navigate({ to: '/order/confirmation', search: { orderId: finalOrder.id } })
       } else {
-        navigate({ to: '/order/confirmation', search: { orderId: confirmed.data.id } })
+        navigate({ to: '/order/confirmation', search: { orderId: finalOrder.id } })
       }
     } catch (e) {
-      toast.error('Não foi possível concluir o pedido. Seus itens foram preservados no carrinho.')
+      // keep pending_checkout/idempotency for a later retry/recovery attempt
+      toast.error('Não foi possível concluir o pedido. Tentaremos recuperar a mesma tentativa se ela já tiver sido criada.')
     } finally {
       setSubmitting(false)
     }
