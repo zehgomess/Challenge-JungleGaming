@@ -51,10 +51,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setUser(null)
       queryClient.clear()
       const detail = (event as CustomEvent<{ returnTo?: string }>).detail
-      if (detail?.returnTo && !detail.returnTo.startsWith('/login')) {
-        sessionStorage.setItem('auth_resume_to', detail.returnTo)
+      const returnTo = detail?.returnTo && !detail.returnTo.startsWith('/login') ? detail.returnTo : undefined
+      if (returnTo) {
+        sessionStorage.setItem('auth_resume_to', returnTo)
       }
       window.dispatchEvent(new Event('auth-logout'))
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+        const target = returnTo ? `/login?returnTo=${encodeURIComponent(returnTo)}` : '/login'
+        window.location.assign(target)
+      }
     }
 
     window.addEventListener('session-expired', handleSessionExpired)

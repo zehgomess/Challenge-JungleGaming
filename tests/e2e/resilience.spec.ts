@@ -71,3 +71,19 @@ test('checkout: repeated confirm click does not create duplicate successful flow
   await expect(page).toHaveURL(/\/order\/confirmation/, { timeout: 30000 })
   await expect(page.getByText(/confirmado|Recibo|Confirma/i).first()).toBeVisible({ timeout: 15000 })
 })
+test('session: cleared auth on payment redirects to login with resume to payment', async ({ page }) => {
+  await login(page)
+  await page.goto('/nfts/nft-6')
+  await expect(page.getByRole('button', { name: /Adicionar ao carrinho/i })).toBeVisible({ timeout: 15000 })
+  await page.getByRole('button', { name: /Adicionar ao carrinho/i }).click()
+  await page.goto('/payment')
+  await expect(page).toHaveURL(/\/payment/, { timeout: 15000 })
+
+  await page.evaluate(() => {
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('auth_user')
+  })
+  await page.goto('/payment')
+  await expect(page).toHaveURL(/\/login/, { timeout: 15000 })
+  await expect(page.getByText(/Entrar/i).first()).toBeVisible({ timeout: 15000 })
+})
