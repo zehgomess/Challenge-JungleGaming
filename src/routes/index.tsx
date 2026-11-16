@@ -86,7 +86,16 @@ function Home() {
                 <Skeleton className="h-40 w-full" />
               ) : (
                 <Link to="/nfts/$nftId" params={{ nftId: nft.id }} className="block">
-                  <img src={nft.image} alt={nft.name} className="h-40 w-full object-cover" />
+                  <img
+                    src={nft.image}
+                    alt={nft.name}
+                    width={600}
+                    height={400}
+                    loading={idx === 0 ? 'eager' : 'lazy'}
+                    fetchPriority={idx === 0 ? 'high' : 'auto'}
+                    decoding="async"
+                    className="h-40 w-full object-cover"
+                  />
                   <CardHeader className="p-4">
                     <CardTitle className="text-base">{nft.name}</CardTitle>
                     <CardDescription className="line-clamp-2">{nft.description}</CardDescription>

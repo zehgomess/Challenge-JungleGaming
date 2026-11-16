@@ -10,6 +10,36 @@ import {
 
 const editions = ['Standard', 'Gold', 'Platinum'] as const
 
+function createNftArtwork(index: number) {
+  const hue = (index * 47 + 132) % 360
+  const accentHue = (hue + 58) % 360
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+          <stop stop-color="hsl(${hue} 64% 16%)"/>
+          <stop offset="1" stop-color="hsl(${accentHue} 67% 38%)"/>
+        </linearGradient>
+        <radialGradient id="glow">
+          <stop stop-color="hsl(${accentHue} 95% 78%)" stop-opacity=".72"/>
+          <stop offset="1" stop-color="hsl(${accentHue} 95% 78%)" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <rect width="600" height="600" fill="url(#bg)"/>
+      <circle cx="${170 + (index * 29) % 260}" cy="${175 + (index * 37) % 230}" r="190" fill="url(#glow)"/>
+      <path d="M0 430 Q150 320 300 430 T600 420 V600 H0Z" fill="#071512" fill-opacity=".48"/>
+      <path d="M85 390 Q105 230 205 170 Q190 285 135 400Z" fill="#86efac" fill-opacity=".42"/>
+      <path d="M515 390 Q495 230 395 170 Q410 285 465 400Z" fill="#86efac" fill-opacity=".34"/>
+      <path d="M300 145 410 300 300 455 190 300Z" fill="none" stroke="#f0fdf4" stroke-opacity=".85" stroke-width="5"/>
+      <path d="M300 182 382 300 300 418 218 300Z" fill="#d9f99d" fill-opacity=".22" stroke="#d9f99d" stroke-opacity=".75" stroke-width="3"/>
+      <circle cx="300" cy="300" r="28" fill="#fef9c3" fill-opacity=".88"/>
+      <text x="300" y="514" fill="#fff" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" font-weight="700" letter-spacing="6">JUNGLE</text>
+      <text x="300" y="550" fill="#fff" fill-opacity=".8" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" letter-spacing="3">COLLECTIBLE #${index}</text>
+    </svg>
+  `
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
+}
+
 const NFTS: Array<NFT & { version: number }> = Array.from({ length: 24 }).map((_, i) => {
   const edition = editions[i % editions.length]
   const availability = i % 7 === 0 ? 0 : (i % 5) + 1
@@ -19,7 +49,7 @@ const NFTS: Array<NFT & { version: number }> = Array.from({ length: 24 }).map((_
     id: `nft-${i + 1}`,
     name: `Crypto Jungle #${i + 1}`,
     description: `Colecionável da série Jungle (${edition}) com raridade e utilidade no ecossistema.`,
-    image: `https://picsum.photos/seed/jungle-${i + 1}/600/600`,
+    image: createNftArtwork(i + 1),
     edition,
     price,
     availability,

@@ -69,12 +69,40 @@ function NftDetail() {
   })
   if (query.isLoading) {
     return (
-      <div className="p-6 max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Skeleton className="aspect-square w-full" />
-        <div className="space-y-4">
-          <Skeleton className="h-8 w-2/3" />
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-10 w-40" />
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
+        <Skeleton className="h-5 w-36" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <Skeleton className="aspect-square w-full" />
+            <div className="grid grid-cols-4 gap-2">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <Skeleton key={index} className="aspect-square w-full" />
+              ))}
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <Skeleton className="h-8 w-2/3" />
+              <Skeleton className="h-16 w-full mt-3" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-7 w-20" />
+              <Skeleton className="h-7 w-28" />
+              <Skeleton className="h-7 w-24" />
+            </div>
+            <Card>
+              <CardHeader><Skeleton className="h-5 w-32" /></CardHeader>
+              <CardContent className="space-y-3">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <Skeleton key={index} className="h-4 w-full" />
+                ))}
+              </CardContent>
+            </Card>
+            <div className="flex gap-3">
+              <Skeleton className="h-10 flex-1" />
+              <Skeleton className="h-10 w-36" />
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -111,11 +139,29 @@ function NftDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-3">
           <div className="aspect-square bg-muted rounded-lg overflow-hidden">
-            <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
+            <img
+              src={nft.image}
+              alt={nft.name}
+              width={600}
+              height={600}
+              fetchPriority="high"
+              loading="eager"
+              decoding="async"
+              className="w-full h-full object-cover"
+            />
           </div>
           <div className="grid grid-cols-4 gap-2">
             {[nft.image, nft.image, nft.image, nft.image].map((src, i) => (
-              <img key={i} src={src} alt={`${nft.name} miniatura ${i + 1}`} className="aspect-square rounded-md object-cover opacity-80" />
+              <img
+                key={i}
+                src={src}
+                alt={`${nft.name} miniatura ${i + 1}`}
+                width={150}
+                height={150}
+                loading="lazy"
+                decoding="async"
+                className="w-full aspect-square rounded-md object-cover opacity-80"
+              />
             ))}
           </div>
         </div>
