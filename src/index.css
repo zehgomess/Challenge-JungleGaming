@@ -158,6 +158,16 @@ body {
   * {
     @apply border-border outline-ring/50;
   }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:not([tabindex='-1']):focus-visible {
+    outline: 2px solid var(--color-primary, #f97316);
+    outline-offset: 2px;
+  }
   body {
     @apply bg-background text-foreground;
   }
