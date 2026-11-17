@@ -72,6 +72,8 @@ function Home() {
   const total = query.data?.data.total ?? 0
   const limit = query.data?.data.limit ?? 8
   const totalPages = Math.max(1, Math.ceil(total / limit))
+  const showDefaultPreview =
+    !search && !edition && !availability && sort === 'recent' && order === 'desc' && page === 1
 
   return (
     <div className="marketplace-page">
@@ -209,7 +211,34 @@ function Home() {
 
               {query.isLoading && (
                 <div className="nft-grid">
-                  {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-72 w-full" />)}
+                  {showDefaultPreview && (
+                    <div className="nft-card loading-preview" aria-hidden="true">
+                      <div className="nft-card-art">
+                        <img
+                          src="/artworks/emerald-ape-042.webp"
+                          alt=""
+                          width={600}
+                          height={600}
+                          loading="eager"
+                          fetchPriority="high"
+                          decoding="async"
+                        />
+                      </div>
+                      <CardHeader className="nft-card-header">
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="mt-2 h-3 w-1/2" />
+                      </CardHeader>
+                      <CardFooter className="nft-card-footer">
+                        <div className="w-full space-y-2">
+                          <Skeleton className="h-3 w-1/3" />
+                          <Skeleton className="h-2 w-1/4" />
+                        </div>
+                      </CardFooter>
+                    </div>
+                  )}
+                  {Array.from({ length: showDefaultPreview ? 7 : 8 }).map((_, i) => (
+                    <Skeleton key={i} className="h-72 w-full" />
+                  ))}
                 </div>
               )}
 
@@ -234,7 +263,7 @@ function Home() {
               {!query.isLoading && !query.isError && items.length > 0 && (
                 <>
                   <div className="nft-grid">
-                    {items.map((nft) => (
+                    {items.map((nft, index) => (
                       <Card key={nft.id} className="nft-card">
                         <Link to="/nfts/$nftId" params={{ nftId: nft.id }} className="nft-card-link">
                           <div className="nft-card-art">
@@ -243,7 +272,8 @@ function Home() {
                               alt={nft.name}
                               width={600}
                               height={600}
-                              loading="lazy"
+                              loading={index === 0 ? 'eager' : 'lazy'}
+                              fetchPriority={index === 0 ? 'high' : 'auto'}
                               decoding="async"
                             />
                             {nft.availability <= 0 && <span className="nft-rarity">Esgotado</span>}
