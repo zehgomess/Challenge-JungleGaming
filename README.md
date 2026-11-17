@@ -77,9 +77,9 @@ npm run preview
 
 ## Testes e qualidade (executado)
 - **Playwright (E2E/visual):** suíte executável em `tests/e2e/`; **82/82 testes passaram** no último run, com fluxos em desktop 1440px/mobile 390px e regressão visual em tablet 768px (`workers: 1`). Inclui sessão/troca de conta, retry, quote, reconexão/pedido pendente, histórico, abort explícito de busca obsoleta e validação por teclado. Baselines para **home, detalhe, carrinho e pagamento** estão em `tests/e2e/visual.spec.ts-snapshots/`.
-- **Lighthouse:** 3 runs por cenário para home/detalhe desktop/mobile estão versionados em `reports/lighthouse/` (preview) e `reports/lighthouse-production/` (Vercel). Resumos: `reports/lighthouse/SUMMARY.md` e `reports/lighthouse-production/SUMMARY.md`.
-- **Lighthouse produção (medianas):** home desktop 1.00 / mobile 0.80; detalhe desktop 1.00 / mobile 0.81. CLS de detalhe 0.010 desktop / 0.036 mobile. LCP mobile permanece ~3.8 s e deve ser comparado com o alvo do enunciado; relatórios contêm LCP/TBT e diagnósticos.
-- **Acessibilidade/SEO:** `lang="pt-BR"`, erros de formulário associados e anunciados, wallet address validado; última auditoria Lighthouse production: accessibility/best-practices/SEO 100/100/100.
+- **Lighthouse:** 3 runs por cenário para home/detalhe desktop/mobile estão versionados em `reports/lighthouse-full-categories-2026-11-17/` (matriz completa da produção) e em `reports/lighthouse-deployed-2026-11-17/` (matriz performance-only). Resumos e JSON/HTML estão junto aos relatórios.
+- **Lighthouse produção — matriz completa, medianas:** home mobile perf 0.97 / accessibility 1.00 / best practices 1.00 / SEO 1.00; detalhe mobile 0.98 / 1.00 / 1.00 / 1.00; desktop 1.00 nas quatro categorias. LCP mediano: 2.350 s home mobile / 2.315 s detalhe mobile; 522/477 ms desktop.
+- **Acessibilidade/SEO:** `lang="pt-BR"`, erros de formulário associados e anunciados, wallet address validado; a matriz completa atual atinge as metas Lighthouse. Ainda falta concluir a revisão manual de foco/teclado em todos os fluxos.
 
 ## Deploy
 - **URL pública (Vercel, produção):** https://challenge-jungle-gaming-lac.vercel.app/
@@ -89,4 +89,4 @@ npm run preview
 
 ## Limitações conhecidas
 - O demo é client-side com MSW; dados simulados não persistem em um backend compartilhado entre sessões/dispositivos.
-- O LCP mobile ainda está próximo de 4 s; a fidelidade pixel a pixel precisa ser conferida contra o arquivo Figma de referência, indisponível neste ambiente. A auditoria de foco/teclado ainda deve ser completada em todos os fluxos/componentes.
+- A aplicação tem um shell progressivo de carregamento; a mediana Lighthouse oficial de LCP mobile está em ~2.3 s, embora TBT/tempo até a aplicação ficar totalmente interativa varie por perfil de auditoria. A fidelidade pixel a pixel ainda precisa ser conferida por comparação direta com os frames Figma, e a auditoria manual de foco/teclado precisa cobrir todos os fluxos.
