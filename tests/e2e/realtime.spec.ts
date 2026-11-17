@@ -8,7 +8,7 @@ async function login(page: Page) {
   await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 })
 }
 
-async function emitNftUpdate(page: Page, payload: any) {
+async function emitNftUpdate(page: Page, payload: Record<string, unknown>) {
   await page.evaluate(
     (data) =>
       fetch('/api/__test/nft-update', {
@@ -64,6 +64,7 @@ test('socket: MSW has an active Socket.IO client on the current origin', async (
   } catch (error) {
     throw new Error(
       `Socket.IO diagnostics: ${socketState}\n${diagnostics.join('\n')}\n${String(error)}`,
+      { cause: error },
     )
   }
 })
