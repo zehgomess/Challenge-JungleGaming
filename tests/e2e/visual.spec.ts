@@ -1,15 +1,22 @@
 import { test, expect } from 'playwright/test'
 
 const pages = [
-  { name: 'home', path: '/' },
-  { name: 'detail', path: '/nfts/nft-2' },
-  { name: 'cart', path: '/cart' },
+  { name: 'home', path: '/', readyHeading: /Marketplace de NFTs/i },
+  { name: 'detail', path: '/nfts/nft-2', readyHeading: /Crypto Jungle #2/i },
+  { name: 'cart', path: '/cart', readyHeading: /^Carrinho$/i },
 ]
 
 for (const p of pages) {
   test(`visual: ${p.name}`, async ({ page }) => {
     await page.goto(p.path)
-    await page.waitForTimeout(1200)
+    await expect(page.getByRole('heading', { level: 1, name: p.readyHeading })).toBeVisible()
+    await page.evaluate(() => {
+      const visible = [...document.images].filter((image) => {
+        const bounds = image.getBoundingClientRect()
+        return bounds.width > 0 && bounds.bottom > 0 && bounds.top < window.innerHeight
+      })
+      return Promise.all(visible.map((image) => image.decode().catch(() => undefined)))
+    })
     await expect(page).toHaveScreenshot(`${p.name}.png`, { fullPage: true, maxDiffPixelRatio: 0.05 })
   })
 }
@@ -44,6 +51,13 @@ test('visual: payment', async ({ page }) => {
     localStorage.setItem('cart:user:user-1', seededCart)
   })
   await page.goto('/payment')
-  await page.waitForTimeout(1500)
+  await expect(page.getByRole('heading', { level: 1, name: /Pagamento/i })).toBeVisible()
+  await page.evaluate(() => {
+    const visible = [...document.images].filter((image) => {
+      const bounds = image.getBoundingClientRect()
+      return bounds.width > 0 && bounds.bottom > 0 && bounds.top < window.innerHeight
+    })
+    return Promise.all(visible.map((image) => image.decode().catch(() => undefined)))
+  })
   await expect(page).toHaveScreenshot('payment.png', { fullPage: true, maxDiffPixelRatio: 0.05 })
 })

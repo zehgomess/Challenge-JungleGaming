@@ -176,6 +176,22 @@ body {
     backdrop-filter: blur(16px);
   }
 
+  .bootstrap-route {
+    display: grid;
+    min-height: 100vh;
+    align-content: center;
+    justify-items: center;
+    gap: 18px;
+    background: #120c09;
+    color: #c6b39c;
+    font-size: 12px;
+  }
+
+  .filter-label {
+    color: #b7a087;
+    font-size: 11px;
+  }
+
   .site-header-inner {
     width: min(100% - 48px, 1320px);
     min-height: 76px;
