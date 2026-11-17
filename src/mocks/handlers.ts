@@ -73,10 +73,30 @@ const MOCK_USER: User = {
   created_at: new Date().toISOString(),
 }
 
+type MockCredential = { passwordSalt: string; passwordHash: string; token: string; userId: string }
+
+async function hashPassword(password: string, salt: string) {
+  const encoded = new TextEncoder().encode(`${salt}:${password}`)
+  const digest = await crypto.subtle.digest('SHA-256', encoded)
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
+function createPasswordSalt() {
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
 const usersById = new Map<string, User>([[MOCK_USER.id, MOCK_USER]])
 const userIdByToken = new Map<string, string>([['mock-token-123', MOCK_USER.id]])
-const credentialsByEmail = new Map<string, { password: string; token: string; userId: string }>([
-  ['collector@jungle.io', { password: 'password123', token: 'mock-token-123', userId: MOCK_USER.id }],
+const credentialsByEmail = new Map<string, MockCredential>([
+  [
+    'collector@jungle.io',
+    {
+      passwordSalt: 'demo-user-1',
+      passwordHash: '220a1cda079f13126c25358fb9cd8e9bc15330d4a261d89e32281b419be5c397',
+      token: 'mock-token-123',
+      userId: MOCK_USER.id,
+    },
+  ],
 ])
 let nextUserId = 2
 
@@ -213,7 +233,8 @@ export const handlers = [
     const body = (await request.json()) as { email: string; password: string }
     await delay(300)
     const credentials = credentialsByEmail.get(body.email.toLowerCase())
-    if (credentials?.password === body.password) {
+    const passwordHash = credentials ? await hashPassword(body.password, credentials.passwordSalt) : ''
+    if (credentials && passwordHash === credentials.passwordHash) {
       const user = usersById.get(credentials.userId)
       if (user) return HttpResponse.json({ token: credentials.token, user })
     }
@@ -238,7 +259,9 @@ export const handlers = [
     }
     usersById.set(id, user)
     userIdByToken.set(token, id)
-    credentialsByEmail.set(email, { password: body.password, token, userId: id })
+    const passwordSalt = createPasswordSalt()
+    const passwordHash = await hashPassword(body.password, passwordSalt)
+    credentialsByEmail.set(email, { passwordSalt, passwordHash, token, userId: id })
     favoritesByUser.set(id, new Set())
     walletsByUser.set(id, [])
     return HttpResponse.json({ token, user })
@@ -270,13 +293,17 @@ export const handlers = [
     const user = usersById.get(userId)
     const credentials = user ? credentialsByEmail.get(user.email.toLowerCase()) : undefined
     if (!credentials) return new HttpResponse(null, { status: 401 })
-    if (body.currentPassword !== credentials.password) {
+    const currentPasswordHash = body.currentPassword
+      ? await hashPassword(body.currentPassword, credentials.passwordSalt)
+      : ''
+    if (currentPasswordHash !== credentials.passwordHash) {
       return HttpResponse.json({ message: 'Senha atual incorreta' }, { status: 400 })
     }
     if (!body.newPassword || body.newPassword.length < 6) {
       return HttpResponse.json({ message: 'Nova senha inválida' }, { status: 400 })
     }
-    credentials.password = body.newPassword
+    credentials.passwordSalt = createPasswordSalt()
+    credentials.passwordHash = await hashPassword(body.newPassword, credentials.passwordSalt)
     return HttpResponse.json({ success: true })
   }),
 

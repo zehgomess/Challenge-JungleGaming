@@ -36,7 +36,7 @@ Aplicação SPA em React + TypeScript (Vite) com roteamento client-side (TanStac
 - **Persistência:** token/usuário em `localStorage` para recuperação após refresh; chaves legadas de `sessionStorage` limpas no fluxo.
 - **Expiração:** interceptor Axios trata `401` disparando `session-expired`; provider limpa sessão e cache e preserva caminho de retomada (`auth_resume_to`).
 - **Proteção de rotas:** `requireAuth` em `beforeLoad` redireciona para login com `returnTo`; login/registro consomem retorno/retomada.
-- **Isolamento REST/cache:** cada token de demo mapeia para um usuário próprio; favoritos, carteiras, perfil, credenciais e pedidos são isolados por `userId`. Chaves de cache incluem o usuário quando os dados são privados; logout/login limpa o cache e reinicializa deduplicação/assinaturas.
+- **Isolamento REST/cache:** cada token de demo mapeia para um usuário próprio; favoritos, carteiras, perfil, credenciais e pedidos são isolados por `userId`. Senhas fictícias são verificadas por hash com salt em memória, sem persistência em claro. Chaves de cache incluem o usuário quando os dados são privados; logout/login limpa o cache e reinicializa deduplicação/assinaturas.
 
 ## Carrinho e checkout
 - **Estado:** `CartProvider` com persistência em `localStorage` (visitante e por usuário) e merge de itens do visitante ao autenticar.
@@ -58,4 +58,4 @@ Aplicação SPA em React + TypeScript (Vite) com roteamento client-side (TanStac
 
 ## Desvios potenciais em relação ao Figma
 - O arquivo Figma foi acessado e as principais telas/referências de arte foram usadas para orientar a identidade visual. Ainda não foi executada uma comparação visual automatizada contra os frames originais; galeria interativa/edições alternativas no detalhe, textos de colecionáveis e pequenos alinhamentos permanecem candidatos a refinamento. A quantidade no detalhe agora respeita o estoque retornado pela API.
-- Os handlers de autenticação de demonstração ainda guardam senhas fictícias em memória para validar login; substituir por verificadores com hash evitaria texto claro. `npm run lint` também aponta erros existentes de tipagem, Fast Refresh e regras de hooks.
+- A galeria interativa e alternativas de edição não estão no contrato atual (um campo de imagem e uma edição por NFT). `npm run lint` ainda aponta erros existentes de tipagem, Fast Refresh e regras de hooks.
