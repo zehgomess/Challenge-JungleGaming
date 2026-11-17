@@ -19,6 +19,20 @@ test('detail: direct access and not found', async ({ page }) => {
   ).toBeVisible({ timeout: 15000 })
 })
 
+test('detail: gallery thumbnails switch the main artwork', async ({ page }) => {
+  await page.goto('/nfts/nft-2')
+
+  const gallery = page.getByRole('group', { name: /Galeria de imagens do NFT/i })
+  await expect(gallery).toBeVisible()
+  const mainArtwork = page.getByRole('img', { name: /Crypto Jungle #2/i })
+  await expect(mainArtwork).toHaveAttribute('src', '/artworks/violet-nomad-314.webp')
+
+  const secondImage = page.getByRole('button', { name: 'Ver imagem 2 de 2' })
+  await secondImage.click()
+  await expect(mainArtwork).toHaveAttribute('src', '/artworks/emerald-ape-042.webp')
+  await expect(secondImage).toHaveAttribute('aria-pressed', 'true')
+})
+
 test('detail: choose an available quantity and add that amount to the cart', async ({ page }) => {
   await page.goto('/nfts/nft-2')
   const selectedQuantity = page.getByLabel('Quantidade selecionada')

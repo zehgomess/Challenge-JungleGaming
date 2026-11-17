@@ -3,6 +3,7 @@ export interface NFT {
   name: string
   description: string
   image: string
+  gallery?: string[]
   edition: string
   price: string // ETH as decimal string
   availability: number

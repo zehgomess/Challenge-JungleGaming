@@ -128,11 +128,6 @@ function DetailBootstrapScreen({ artwork }: { artwork?: string }) {
                 ? <img src={artwork} alt="" width={600} height={600} fetchPriority="high" decoding="async" className="w-full h-full object-cover" />
                 : <Skeleton className="w-full h-full" />}
             </div>
-            <div className="grid grid-cols-4 gap-2">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <Skeleton key={index} className="aspect-square w-full" />
-              ))}
-            </div>
           </div>
           <div className="space-y-4">
             <div className="flex items-start justify-between gap-3">

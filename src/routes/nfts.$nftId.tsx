@@ -17,6 +17,7 @@ export const Route = createFileRoute('/nfts/$nftId')({
 function NftDetail() {
   const { nftId } = Route.useParams()
   const [quantitySelection, setQuantitySelection] = useState({ nftId, quantity: 1 })
+  const [gallerySelection, setGallerySelection] = useState({ nftId, index: 0 })
   const navigate = useNavigate()
   const qc = useQueryClient()
   const { isAuthenticated, user } = useSession()
@@ -134,6 +135,11 @@ function NftDetail() {
 
   const nft = query.data.data
   const unavailable = nft.availability <= 0
+  const galleryImages = Array.from(new Set([nft.image, ...(nft.gallery ?? [])]))
+  const galleryIndex =
+    gallerySelection.nftId === nftId
+      ? Math.min(gallerySelection.index, galleryImages.length - 1)
+      : 0
   const maxQuantity = Math.max(1, nft.availability)
   const selectedQuantity = Math.min(
     quantitySelection.nftId === nftId ? quantitySelection.quantity : 1,
@@ -147,7 +153,7 @@ function NftDetail() {
         <div className="space-y-3">
           <div className="aspect-square bg-muted rounded-lg overflow-hidden">
             <img
-              src={nft.image}
+              src={galleryImages[galleryIndex]}
               alt={nft.name}
               width={600}
               height={600}
@@ -157,20 +163,30 @@ function NftDetail() {
               className="w-full h-full object-cover"
             />
           </div>
-          <div className="grid grid-cols-4 gap-2">
-            {[nft.image, nft.image, nft.image, nft.image].map((src, i) => (
-              <img
-                key={i}
-                src={src}
-                alt={`${nft.name} miniatura ${i + 1}`}
-                width={150}
-                height={150}
-                loading="lazy"
-                decoding="async"
-                className="w-full aspect-square rounded-md object-cover opacity-80"
-              />
-            ))}
-          </div>
+          {galleryImages.length > 1 && (
+            <div className="grid grid-cols-4 gap-2" role="group" aria-label="Galeria de imagens do NFT">
+              {galleryImages.map((src, index) => (
+                <button
+                  key={`${src}-${index}`}
+                  type="button"
+                  aria-label={`Ver imagem ${index + 1} de ${galleryImages.length}`}
+                  aria-pressed={galleryIndex === index}
+                  onClick={() => setGallerySelection({ nftId, index })}
+                  className={`overflow-hidden rounded-md border ${galleryIndex === index ? 'border-primary' : 'border-transparent'}`}
+                >
+                  <img
+                    src={src}
+                    alt=""
+                    width={150}
+                    height={150}
+                    loading="lazy"
+                    decoding="async"
+                    className="aspect-square w-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="space-y-4">

@@ -53,6 +53,7 @@ const NFTS: Array<NFT & { version: number }> = Array.from({ length: 24 }).map((_
       i < 4
         ? `/artworks/${['emerald-ape-042', 'violet-nomad-314', 'ivory-baron-008', 'golden-beat-207'][i]}.webp`
         : createNftArtwork(i + 1),
+    gallery: i === 1 ? ['/artworks/violet-nomad-314.webp', '/artworks/emerald-ape-042.webp'] : undefined,
     edition,
     price,
     availability,
@@ -117,6 +118,7 @@ const testControls = {
   auth401: false,
   nftGetFail: 0,
   nftListDelayBySearch: {} as Record<string, number>,
+  nftGalleryById: {} as Record<string, string[]>,
   orderCreateTimeout: 0,
   orderCreateFail: 0,
   orderConfirmPending: 0,
@@ -195,8 +197,10 @@ export const handlers = [
     const nft = NFTS.find((n) => n.id === params.id)
     if (!nft) return new HttpResponse(null, { status: 404 })
     const userId = getUserId(request)
-    const [item] = withFavoriteState([nft], userId)
-    return HttpResponse.json(item)
+    const gallery = testControls.nftGalleryById[nft.id] ?? nft.gallery
+    const item = gallery?.length ? { ...nft, gallery } : nft
+    const [result] = withFavoriteState([item], userId)
+    return HttpResponse.json(result)
   }),
 
   http.post('/api/nfts/:id/favorite', async ({ params, request }) => {
@@ -571,6 +575,15 @@ export const handlers = [
             Math.max(0, Math.min(5000, value as number)),
           ]),
       )
+    }
+    if (body.nftGalleryById && typeof body.nftGalleryById === 'object') {
+      const galleryControl: Record<string, string[]> = {}
+      for (const [id, gallery] of Object.entries(body.nftGalleryById as Record<string, unknown>)) {
+        if (Array.isArray(gallery) && gallery.every((url) => typeof url === 'string')) {
+          galleryControl[id] = gallery as string[]
+        }
+      }
+      testControls.nftGalleryById = galleryControl
     }
     if (body.resetListQueryDiagnostics) {
       for (const bucket of Object.values(listQueryDiagnostics)) {

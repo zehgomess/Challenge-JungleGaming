@@ -99,4 +99,4 @@ npm run lighthouse:audit
 ## Limitações conhecidas
 - O demo é client-side com MSW; dados simulados não persistem em um backend compartilhado entre sessões/dispositivos.
 - A aplicação tem um shell progressivo de carregamento; a mediana Lighthouse oficial de LCP mobile está em ~2.3 s, embora TBT/tempo até a aplicação ficar totalmente interativa varie por perfil de auditoria. A fidelidade pixel a pixel ainda precisa ser conferida por comparação direta com os frames Figma, e a auditoria manual de foco/teclado precisa cobrir todos os fluxos.
-- Galeria e edição alternativas ainda não estão modeladas no contrato (cada NFT tem uma imagem/edição). `npm run lint` ainda aponta erros de tipagem/regras de hooks em arquivos existentes.
+- A galeria aceita `gallery[]`, mas as fixtures atuais têm uma imagem por NFT; seleção de edições alternativas ainda não existe no contrato. `npm run lint` ainda aponta erros de tipagem/regras de hooks em arquivos existentes.
