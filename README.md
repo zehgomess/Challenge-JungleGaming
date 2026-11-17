@@ -46,6 +46,14 @@ npm run build
 npm run preview
 ```
 
+## Qualidade
+```bash
+npm run typecheck
+npm run lint
+npm run test:e2e
+npm run lighthouse:audit
+```
+
 ## Cenários simulados (MSW) e reset
 - Catálogo com busca/filtros/ordenação/paginação, detalhe, favoritos por usuário autenticado.
 - Contas registradas com token e estado isolados (perfil, senha, favoritos, carteiras, carrinho e pedidos por `userId`).
@@ -62,6 +70,7 @@ npm run preview
 - Proteção de fluxos privados com redirecionamento e `returnTo`.
 - Sessão persistente (refresh), tratamento de expiração (401/evento) com tentativa de retomada.
 - Catálogo/detalhe com estados loading/empty/error/success e parâmetros na URL.
+- Detalhe com quantidade limitada pela disponibilidade; o contrato mock atual oferece uma edição e uma imagem por NFT.
 - Carrinho com persistência/merge visitante→usuário, cupom e totais via API mock.
 - Pagamento/confirmação com revisão, simulação de carteira/rede, revalidação pré-confirmação, idempotência e recibo snapshot.
 - Perfil e carteiras com validações e persistência via mock.
@@ -76,7 +85,7 @@ npm run preview
 - **Sessão expirada:** remover token/forçar 401 em chamadas autenticadas; fluxo redireciona para login com retomada.
 
 ## Testes e qualidade (executado)
-- **Playwright (E2E/visual):** suíte executável em `tests/e2e/`; **82/82 testes passaram** no último run, com fluxos em desktop 1440px/mobile 390px e regressão visual em tablet 768px (`workers: 1`). Inclui sessão/troca de conta, retry, quote, reconexão/pedido pendente, histórico, abort explícito de busca obsoleta e validação por teclado. Baselines para **home, detalhe, carrinho e pagamento** estão em `tests/e2e/visual.spec.ts-snapshots/`.
+- **Playwright (E2E/visual):** suíte executável em `tests/e2e/`; **86/86 testes passaram** no último run, com fluxos em desktop 1440px/mobile 390px e regressão visual em tablet 768px (`workers: 1`). Inclui sessão/troca de conta, retry, quote, reconexão/pedido pendente, histórico, aborto explícito de busca obsoleta, seleção de quantidade no detalhe e dados do colecionador no pagamento. Baselines para **home, detalhe, carrinho e pagamento** estão em `tests/e2e/visual.spec.ts-snapshots/`.
 - **Lighthouse:** 3 runs por cenário para home/detalhe desktop/mobile estão versionados em `reports/lighthouse-full-categories-2026-11-17/` (matriz completa da produção) e em `reports/lighthouse-deployed-2026-11-17/` (matriz performance-only). Resumos e JSON/HTML estão junto aos relatórios.
 - **Lighthouse produção — matriz completa, medianas:** home mobile perf 0.97 / accessibility 1.00 / best practices 1.00 / SEO 1.00; detalhe mobile 0.98 / 1.00 / 1.00 / 1.00; desktop 1.00 nas quatro categorias. LCP mediano: 2.350 s home mobile / 2.315 s detalhe mobile; 522/477 ms desktop.
 - **Acessibilidade/SEO:** `lang="pt-BR"`, erros de formulário associados e anunciados, wallet address validado; a matriz completa atual atinge as metas Lighthouse. Ainda falta concluir a revisão manual de foco/teclado em todos os fluxos.
@@ -90,3 +99,4 @@ npm run preview
 ## Limitações conhecidas
 - O demo é client-side com MSW; dados simulados não persistem em um backend compartilhado entre sessões/dispositivos.
 - A aplicação tem um shell progressivo de carregamento; a mediana Lighthouse oficial de LCP mobile está em ~2.3 s, embora TBT/tempo até a aplicação ficar totalmente interativa varie por perfil de auditoria. A fidelidade pixel a pixel ainda precisa ser conferida por comparação direta com os frames Figma, e a auditoria manual de foco/teclado precisa cobrir todos os fluxos.
+- Galeria e edição alternativas ainda não estão modeladas no contrato (cada NFT tem uma imagem/edição); o mock também mantém senhas fictícias em memória. `npm run lint` ainda aponta erros de tipagem/regras de hooks em arquivos existentes.

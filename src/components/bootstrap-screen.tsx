@@ -146,6 +146,17 @@ function DetailBootstrapScreen({ artwork }: { artwork?: string }) {
               <Skeleton className="h-7 w-20" />
             </div>
             <Skeleton className="h-48 w-full rounded-lg" />
+            <div className="flex items-end justify-between gap-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-10 w-10" />
+                  <Skeleton className="h-10 w-10" />
+                  <Skeleton className="h-10 w-10" />
+                </div>
+                <Skeleton className="h-3 w-36" />
+              </div>
+            </div>
             <div className="flex gap-3">
               <Skeleton className="h-10 flex-1" />
               <Skeleton className="h-10 w-36" />

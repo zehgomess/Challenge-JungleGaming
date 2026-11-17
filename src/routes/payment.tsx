@@ -164,6 +164,20 @@ function PaymentPage() {
         <h1 className="text-2xl font-heading font-bold text-text-h">Pagamento</h1>
 
         <Card>
+          <CardHeader><CardTitle className="text-base">Dados do colecionador</CardTitle></CardHeader>
+          <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <p className="text-muted-foreground">Nome</p>
+              <p className="font-medium text-text-h">{user?.name || 'Carregando dados...'}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">E-mail</p>
+              <p className="break-all font-medium text-text-h">{user?.email || 'Carregando dados...'}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardHeader><CardTitle className="text-base">Carteira e rede</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div>

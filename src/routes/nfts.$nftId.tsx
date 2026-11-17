@@ -1,5 +1,6 @@
 ﻿import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { nftApi } from '@/api/nfts'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +16,7 @@ export const Route = createFileRoute('/nfts/$nftId')({
 
 function NftDetail() {
   const { nftId } = Route.useParams()
+  const [quantitySelection, setQuantitySelection] = useState({ nftId, quantity: 1 })
   const navigate = useNavigate()
   const qc = useQueryClient()
   const { isAuthenticated, user } = useSession()
@@ -132,6 +134,11 @@ function NftDetail() {
 
   const nft = query.data.data
   const unavailable = nft.availability <= 0
+  const maxQuantity = Math.max(1, nft.availability)
+  const selectedQuantity = Math.min(
+    quantitySelection.nftId === nftId ? quantitySelection.quantity : 1,
+    maxQuantity,
+  )
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
@@ -201,6 +208,47 @@ function NftDetail() {
             </CardContent>
           </Card>
 
+          <div className="flex items-end justify-between gap-4">
+            <div className="space-y-2">
+              <span className="text-sm font-medium">Quantidade</span>
+              <div className="flex items-center gap-2" role="group" aria-label="Quantidade de NFTs">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label="Diminuir quantidade"
+                  disabled={unavailable || selectedQuantity <= 1}
+                  onClick={() => setQuantitySelection({ nftId, quantity: selectedQuantity - 1 })}
+                >
+                  <span aria-hidden="true">−</span>
+                </Button>
+                <output
+                  className="min-w-10 text-center font-semibold text-text-h"
+                  aria-label="Quantidade selecionada"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  {selectedQuantity}
+                </output>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label="Aumentar quantidade"
+                  disabled={unavailable || selectedQuantity >= nft.availability}
+                  onClick={() =>
+                    setQuantitySelection({ nftId, quantity: Math.min(selectedQuantity + 1, nft.availability) })
+                  }
+                >
+                  <span aria-hidden="true">+</span>
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Máximo de {nft.availability} por compra
+              </p>
+            </div>
+          </div>
+
           <div className="flex gap-3">
             <Button
               disabled={unavailable}
@@ -209,7 +257,7 @@ function NftDetail() {
                 addItem({
                   nft_id: nft.id,
                   edition: nft.edition,
-                  quantity: 1,
+                  quantity: selectedQuantity,
                   price_at_add: nft.price,
                   name: nft.name,
                   image: nft.image,

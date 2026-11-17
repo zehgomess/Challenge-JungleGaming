@@ -19,6 +19,29 @@ test('detail: direct access and not found', async ({ page }) => {
   ).toBeVisible({ timeout: 15000 })
 })
 
+test('detail: choose an available quantity and add that amount to the cart', async ({ page }) => {
+  await page.goto('/nfts/nft-2')
+  const selectedQuantity = page.getByLabel('Quantidade selecionada')
+  await expect(selectedQuantity).toHaveText('1', { timeout: 15000 })
+  const increase = page.getByRole('button', { name: 'Aumentar quantidade' })
+  await increase.click()
+  await expect(selectedQuantity).toHaveText('2')
+  await expect(increase).toBeDisabled()
+
+  await page.getByRole('button', { name: /Adicionar ao carrinho/i }).click()
+  await page.getByRole('link', { name: /Ver carrinho/i }).click()
+  await expect(page.getByText(/Crypto Jungle #2/i).first()).toBeVisible()
+  await expect(page.getByText('2', { exact: true })).toBeVisible()
+})
+
+test('detail: sold-out inventory blocks quantity changes and purchase', async ({ page }) => {
+  await page.goto('/nfts/nft-1')
+  await expect(page.getByRole('button', { name: /Edição indisponível/i })).toBeVisible({ timeout: 15000 })
+  await expect(page.getByRole('button', { name: 'Aumentar quantidade' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Diminuir quantidade' })).toBeDisabled()
+  await expect(page.getByText('Máximo de 0 por compra')).toBeVisible()
+})
+
 test('detail: recover from a transient API failure with retry', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: /Marketplace de NFTs/i })).toBeVisible()

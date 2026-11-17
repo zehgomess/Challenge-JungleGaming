@@ -132,6 +132,8 @@ test('authenticated checkout and order confirmation', async ({ page }) => {
   await page.goto('/cart')
   await page.getByRole('link', { name: /Ir para pagamento/i }).click()
   await expect(page).toHaveURL(/\/payment/)
+  await expect(page.getByText('Dados do colecionador')).toBeVisible()
+  await expect(page.getByText('collector@jungle.io')).toBeVisible()
   await page.getByRole('button', { name: /Simular conexão/i }).click()
   await expect(page.getByText(/Carteira conectada/i)).toBeVisible({ timeout: 15000 })
   await page.getByLabel(/Confirmo que revisei/i).check()
