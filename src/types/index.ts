@@ -71,6 +71,9 @@ export interface Order {
   total: string
   coupon_code?: string
   transaction_hash?: string
+  idempotency_key?: string
+  wallet_id?: string
+  network?: string
   created_at: string
   updated_at: string
 }

@@ -35,7 +35,7 @@ export function SocketManager() {
       return true
     }
 
-    const onNftUpdated = (payload: any) => {
+    const onNftUpdated = (payload: { id?: string; version?: number; updated_at?: string }) => {
       if (!payload?.id) return
       recordSocketEvent('nft.updated')
       const entityKey = `nft:${payload.id}`
@@ -48,7 +48,7 @@ export function SocketManager() {
       toast.message('Atualização em tempo real: NFT atualizado (preço/disponibilidade).')
     }
 
-  const onOrderUpdated = (payload: any) => {
+  const onOrderUpdated = (payload: { orderId?: string; id?: string; userId?: string; version?: number; updated_at?: string; status?: string }) => {
     const id = payload?.orderId || payload?.id
     if (!id) return
     if (payload?.userId && payload.userId !== user?.id) return

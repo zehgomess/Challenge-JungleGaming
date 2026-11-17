@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { User } from '@/types'
+import type { User, Wallet } from '@/types'
 
 export interface LoginCredentials {
   email: string
@@ -28,7 +28,7 @@ export const authApi = {
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post('/auth/change-password', { currentPassword, newPassword }),
 
-  wallets: () => api.get<{ wallets: any[] }>('/auth/wallets'),
+  wallets: () => api.get<{ wallets: Wallet[] }>('/auth/wallets'),
 
   addWallet: (wallet: { address: string; network: string; is_primary?: boolean; label?: string }) =>
     api.post('/auth/wallets', wallet),

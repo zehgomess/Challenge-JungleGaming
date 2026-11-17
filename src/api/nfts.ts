@@ -3,7 +3,7 @@ import type { NFT, NFTListResponse, PaginationParams } from '@/types'
 import type { AxiosRequestConfig } from 'axios'
 
 export const nftApi = {
-  list: (params: PaginationParams & Record<string, any> = {}, config: AxiosRequestConfig = {}) =>
+  list: (params: PaginationParams & Record<string, unknown> = {}, config: AxiosRequestConfig = {}) =>
     api.get<NFTListResponse>('/nfts', { ...config, params }),
 
   get: (id: string, config: AxiosRequestConfig = {}) => api.get<NFT>(`/nfts/${id}`, config),

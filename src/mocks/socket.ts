@@ -34,15 +34,15 @@ export function disconnectSocketClients() {
   return count
 }
 
-export function emitToAll(event: string, payload: any) {
+export function emitToAll(event: string, payload: unknown) {
   emitToMatchingClients(event, payload)
 }
 
-export function emitToUser(userId: string, event: string, payload: any) {
+export function emitToUser(userId: string, event: string, payload: unknown) {
   emitToMatchingClients(event, payload, userId)
 }
 
-function emitToMatchingClients(event: string, payload: any, userId?: string) {
+function emitToMatchingClients(event: string, payload: unknown, userId?: string) {
   let sent = 0
   let errors = 0
   let lastError: string | undefined

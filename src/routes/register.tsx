@@ -55,10 +55,10 @@ function Register() {
       login(data.data.token, data.data.user)
       toast.success('Conta criada com sucesso!')
       const destination = returnTo || consumeResumePath() || '/'
-      navigate({ to: destination as any })
+      navigate({ to: destination as never })
     },
-    onError: (error: any) => {
-      if (error?.response?.status === 409) {
+    onError: (error: unknown) => {
+      if ((error as { response?: { status?: number } })?.response?.status === 409) {
         toast.error('E-mail já cadastrado')
       } else {
         toast.error('Erro ao criar conta')

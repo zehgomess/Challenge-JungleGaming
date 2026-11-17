@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useSession } from '@/store/session'
+import type { NFT } from '@/types'
 import { useCart } from '@/store/cart'
 import { toast } from 'sonner'
 
@@ -28,7 +29,7 @@ function NftDetail() {
 
   const query = useQuery({
     queryKey: nftQueryKey,
-    queryFn: ({ signal }) => nftApi.get(nftId, { signal } as any),
+    queryFn: ({ signal }) => nftApi.get(nftId, { signal }),
   })
 
   const favMutation = useMutation({
@@ -40,25 +41,27 @@ function NftDetail() {
       await qc.cancelQueries({ queryKey: nftQueryKey })
       const prevNft = qc.getQueryData(nftQueryKey)
       const prevList = qc.getQueriesData({ queryKey: nftListQueryKey })
-      qc.setQueryData(nftQueryKey, (old: any) => {
-        if (!old) return old
-        const data = old.data ? { ...old.data, is_favorited: fav } : old
-        return old.data ? { ...old, data } : data
+      qc.setQueryData(nftQueryKey, (old: unknown) => {
+        const oldResponse = old as { data?: NFT & { is_favorited?: boolean } } | undefined
+        if (!oldResponse) return old
+        const data = oldResponse.data ? { ...oldResponse.data, is_favorited: fav } : oldResponse
+        return oldResponse.data ? { ...oldResponse, data } : data
       })
-      qc.setQueriesData({ queryKey: nftListQueryKey }, (old: any) => {
-        const items = old?.data?.data ?? old?.data?.items
+      qc.setQueriesData({ queryKey: nftListQueryKey }, (old: unknown) => {
+        const oldResponse = old as { data?: { data?: NFT[]; items?: NFT[] } } | undefined
+        const items = oldResponse?.data?.data ?? oldResponse?.data?.items
         if (!Array.isArray(items)) return old
-        const nextItems = items.map((it: any) => (it?.id === nftId ? { ...it, is_favorited: fav } : it))
-        if (old?.data?.data) return { ...old, data: { ...old.data, data: nextItems } }
-        if (old?.data?.items) return { ...old, data: { ...old.data, items: nextItems } }
+        const nextItems = items.map((it: NFT) => (it?.id === nftId ? { ...it, is_favorited: fav } : it))
+        if (oldResponse?.data?.data) return { ...oldResponse, data: { ...oldResponse.data, data: nextItems } }
+        if (oldResponse?.data?.items) return { ...oldResponse, data: { ...oldResponse.data, items: nextItems } }
         return old
       })
       return { prevNft, prevList }
     },
-    onError: (e: any, _fav, ctx) => {
+    onError: (e: unknown, _fav, ctx) => {
       if (ctx?.prevNft) qc.setQueryData(nftQueryKey, ctx.prevNft)
       if (ctx?.prevList) for (const [key, data] of ctx.prevList) qc.setQueryData(key, data)
-      if (e?.message === 'AUTH_REQUIRED') {
+      if ((e as { message?: string })?.message === 'AUTH_REQUIRED') {
         toast.error('Faça login para favoritar')
         navigate({ to: '/login', search: { returnTo: `/nfts/${nftId}` } })
         return
@@ -112,7 +115,7 @@ function NftDetail() {
   }
 
   if (query.isError || !query.data) {
-    const status = (query.error as any)?.response?.status
+    const status = (query.error as { response?: { status?: number } })?.response?.status
     return (
       <div className="p-6 max-w-3xl mx-auto text-center">
         <h1 className="text-2xl font-heading font-bold text-text-h">

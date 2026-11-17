@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { useSession } from '@/store/session'
+import type { Wallet } from '@/types'
 
 export const Route = createFileRoute('/wallets')({
   beforeLoad: ({ location }) => {
@@ -105,7 +106,7 @@ function WalletsPage() {
         <CardHeader><CardTitle className="text-base">Carteiras registradas</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {wallets.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma carteira cadastrada.</p>}
-          {wallets.map((w: any) => (
+          {wallets.map((w: Wallet) => (
             <div key={w.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border rounded-md p-3">
               <div>
                 <p className="font-medium text-sm">{w.label || 'Carteira'} {w.is_primary && <span className="text-xs text-green-700">(Primária)</span>}</p>

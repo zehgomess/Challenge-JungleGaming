@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useSession } from '@/store/session'
+import type { CartItem } from '@/types'
 
 export const Route = createFileRoute('/order/confirmation')({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -86,7 +87,7 @@ function OrderConfirmationPage() {
       <Card>
         <CardHeader><CardTitle className="text-base">Itens</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
-          {order.items.length === 0 ? <p className="text-muted-foreground">Sem itens detalhados.</p> : order.items.map((it: any, idx: number) => (
+          {order.items.length === 0 ? <p className="text-muted-foreground">Sem itens detalhados.</p> : order.items.map((it: CartItem, idx: number) => (
             <div key={idx} className="flex justify-between"><span>{it.nft_id} ({it.edition}) x{it.quantity}</span><span>{it.price_at_add} ETH</span></div>
           ))}
         </CardContent>

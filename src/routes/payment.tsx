@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { useSession } from '@/store/session'
+import type { Wallet, CartItem, CartQuote } from '@/types'
 
 export const Route = createFileRoute('/payment')({
   beforeLoad: ({ location }) => {
@@ -35,7 +36,7 @@ function PaymentPage() {
 
   useEffect(() => {
     if (!selectedWallet && wallets.length) {
-      const primary = wallets.find((w: any) => w.is_primary) ?? wallets[0]
+      const primary = wallets.find((w: Wallet) => w.is_primary) ?? wallets[0]
       setSelectedWallet(primary.id)
       setNetwork(primary.network || 'Ethereum')
     }
@@ -87,7 +88,7 @@ function PaymentPage() {
   const handleConfirm = async () => {
     if (!canSubmit || !quote) return
     setSubmitting(true)
-    let idempotencyKey = ''
+    let idempotencyKey: string
     try {
       // Revalidate price/availability/coupon/fees before confirming
       const fresh = await cartApi.quote(items, couponCode)
@@ -122,7 +123,7 @@ function PaymentPage() {
       try {
         const created = await orderApi.create(createPayload)
         order = created.data
-      } catch (err) {
+      } catch {
         // Recovery path: timeout/failure after possible server-side creation
         const recovered = await orderApi.create(createPayload)
         order = recovered.data
@@ -133,14 +134,14 @@ function PaymentPage() {
       const confirmed = await orderApi.confirm(order.id, { idempotency_key: idempotencyKey })
       const finalOrder = confirmed.data
       if (finalOrder.status === 'confirmed') {
-        removePurchased((finalOrder.items || order.items || []).map((i: any) => ({ nft_id: i.nft_id, edition: i.edition, quantity: i.quantity })))
+        removePurchased((finalOrder.items || order.items || []).map((i: CartItem) => ({ nft_id: i.nft_id, edition: i.edition, quantity: i.quantity })))
         sessionStorage.removeItem('pending_order_id')
         sessionStorage.removeItem('pending_checkout')
         navigate({ to: '/order/confirmation', search: { orderId: finalOrder.id } })
       } else {
         navigate({ to: '/order/confirmation', search: { orderId: finalOrder.id } })
       }
-    } catch (e) {
+    } catch {
       // keep pending_checkout/idempotency for a later retry/recovery attempt
       toast.error('Não foi possível concluir o pedido. Tentaremos recuperar a mesma tentativa se ela já tiver sido criada.')
     } finally {
@@ -182,9 +183,9 @@ function PaymentPage() {
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="wallet">Carteira registrada</Label>
-              <select id="wallet" className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm mt-1" value={selectedWallet} onChange={(e) => { setSelectedWallet(e.target.value); const w = wallets.find((x:any)=>x.id===e.target.value); if (w?.network) setNetwork(w.network); setWalletStatus('disconnected') }}>
+              <select id="wallet" className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm mt-1" value={selectedWallet} onChange={(e) => { setSelectedWallet(e.target.value); const w = wallets.find((x: Wallet)=>x.id===e.target.value); if (w?.network) setNetwork(w.network); setWalletStatus('disconnected') }}>
                 <option value="">Selecione</option>
-                {wallets.map((w: any) => <option key={w.id} value={w.id}>{w.label || w.address} ({w.network}){w.is_primary ? ' • Primária' : ''}</option>)}
+                {wallets.map((w: Wallet) => <option key={w.id} value={w.id}>{w.label || w.address} ({w.network}){w.is_primary ? ' • Primária' : ''}</option>)}
               </select>
               {!wallets.length && <p className="text-sm text-muted-foreground mt-1">Nenhuma carteira registrada. Cadastre em <Link to="/wallets" className="underline">Carteiras</Link>.</p>}
             </div>
@@ -212,7 +213,7 @@ function PaymentPage() {
         <Card>
           <CardHeader><CardTitle className="text-base">Revisão do pedido</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            {(quote?.items ?? items).map((it: any) => (
+            {(quote?.items ?? items).map((it: CartItem & Partial<Pick<CartQuote['items'][number], 'unit_price' | 'line_total' | 'available'>>) => (
               <div key={`${it.nft_id}:${it.edition}`} className="space-y-1">
                 <div className="flex justify-between text-sm">
                   <span>{it.name || it.nft_id} ({it.edition}) x{it.quantity}</span>

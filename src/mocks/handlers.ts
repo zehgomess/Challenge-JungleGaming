@@ -1,5 +1,5 @@
 import { http, HttpResponse, delay } from 'msw'
-import type { NFT, NFTListResponse, User, Order } from '@/types'
+import type { NFT, NFTListResponse, User, Order, CartItem, Wallet } from '@/types'
 import {
   disconnectSocketClients,
   emitToAll,
@@ -109,7 +109,7 @@ const listQueryDiagnostics = {
   completed: {} as Record<string, number>,
   aborted: {} as Record<string, number>,
 }
-const walletsByUser = new Map<string, any[]>([
+const walletsByUser = new Map<string, Wallet[]>([
   ['user-1', [{ id: 'w1', address: '0xabc123def4567890abc123def4567890abcd', network: 'Ethereum', is_primary: true, label: 'Principal' }]],
 ])
 
@@ -163,7 +163,7 @@ export const handlers = [
     if (availability === 'soldout') items = items.filter((n) => n.availability === 0)
 
     items.sort((a, b) => {
-      let cmp = 0
+      let cmp: number
       if (sort === 'price') cmp = Number(a.price) - Number(b.price)
       else if (sort === 'name') cmp = a.name.localeCompare(b.name)
       else cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -285,7 +285,7 @@ export const handlers = [
     const body = (await request.json()) as Partial<User>
     const user = usersById.get(userId)
     if (!user) return new HttpResponse(null, { status: 401 })
-    Object.assign(user, body, { updated_at: new Date().toISOString() } as any)
+    Object.assign(user, body, { updated_at: new Date().toISOString() })
     await delay(200)
     return HttpResponse.json(user)
   }),
@@ -315,7 +315,7 @@ export const handlers = [
     const userId = getUserId(request)
     if (!userId) return new HttpResponse(null, { status: 401 })
     const body = (await request.json()) as {
-      items?: any[]
+      items?: CartItem[]
       coupon_code?: string
       idempotency_key?: string
       wallet_id?: string
@@ -328,7 +328,7 @@ export const handlers = [
 
     if (body.idempotency_key) {
       for (const o of orders.values()) {
-        if ((o as any).user_id === userId && (o as any).idempotency_key === body.idempotency_key) {
+        if ((o as { user_id?: string; idempotency_key?: string }).user_id === userId && (o as { user_id?: string; idempotency_key?: string }).idempotency_key === body.idempotency_key) {
           return HttpResponse.json(o)
         }
       }
@@ -336,7 +336,7 @@ export const handlers = [
     await delay(400)
 
     const quoteItems = (body.items ?? [])
-      .map((it: any) => {
+      .map((it: CartItem) => {
         const nft = NFTS.find((n) => n.id === it.nft_id)
         if (!nft) return null
         const qty = Math.max(0, Math.min(it.quantity || 0, nft.availability))
@@ -358,7 +358,7 @@ export const handlers = [
           price_at_add: nft.price,
         }
       })
-      .filter(Boolean) as any[]
+      .filter(Boolean) as CartItem[]
 
     const subtotalNum = quoteItems.reduce((sum, it) => {
       const nft = NFTS.find((n) => n.id === it.nft_id)
@@ -374,7 +374,7 @@ export const handlers = [
       return HttpResponse.json({ message: 'Falha simulada ao criar pedido' }, { status: 500 })
     }
 
-    const order: any = {
+    const order: Order = {
       id: `order-${Date.now()}`,
       user_id: userId,
       status: 'pending',
@@ -405,7 +405,7 @@ export const handlers = [
     if (!userId) return new HttpResponse(null, { status: 401 })
     const existing = orders.get(String(params.id))
     if (existing) {
-      if ((existing as any).user_id !== userId) return new HttpResponse(null, { status: 404 })
+      if ((existing as { user_id?: string }).user_id !== userId) return new HttpResponse(null, { status: 404 })
       return HttpResponse.json(existing)
     }
     return HttpResponse.json({
@@ -428,8 +428,8 @@ export const handlers = [
     const body = (await request.json().catch(() => ({}))) as { idempotency_key?: string }
     const existing = orders.get(id)
     if (existing) {
-      if ((existing as any).user_id !== userId) return new HttpResponse(null, { status: 404 })
-      if (existing.status === 'confirmed' || existing.status === 'refused' || (existing as any).status === 'cancelled') {
+      if ((existing as { user_id?: string }).user_id !== userId) return new HttpResponse(null, { status: 404 })
+      if (existing.status === 'confirmed' || existing.status === 'refused' || (existing as { status?: string }).status === 'cancelled') {
         return HttpResponse.json(existing)
       }
       if (testControls.orderConfirmPending > 0) {
@@ -443,7 +443,7 @@ export const handlers = [
       emitToUser(userId, 'order.updated', { orderId: id, userId, status: existing.status, updated_at: existing.updated_at })
       return HttpResponse.json(existing)
     }
-    const fallback: any = {
+    const fallback: Order = {
       id,
       user_id: userId,
       status: 'confirmed',
@@ -485,9 +485,9 @@ export const handlers = [
           available,
         }
       })
-      .filter(Boolean) as any[]
+      .filter(Boolean) as CartItem[]
 
-    const subtotalNum = items.reduce((sum, it) => sum + Number(it.line_total), 0)
+    const subtotalNum = items.reduce((sum, it) => sum + Number((it as { line_total?: string }).line_total), 0)
     let discountNum = 0
     let coupon_valid = false
     let coupon_error: string | undefined
@@ -532,12 +532,12 @@ export const handlers = [
   http.post('/api/auth/wallets', async ({ request }) => {
     const userId = getUserId(request)
     if (!userId) return new HttpResponse(null, { status: 401 })
-    const body = (await request.json()) as any
+    const body = (await request.json()) as { address?: string; network?: string; is_primary?: boolean; label?: string }
     if (typeof body.address !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(body.address.trim())) {
       return HttpResponse.json({ message: 'Endereço de carteira inválido' }, { status: 400 })
     }
     const list = walletsByUser.get(userId) ?? []
-    const wallet = { id: `w-${Date.now()}`, is_primary: false, ...body, address: body.address.trim() }
+    const wallet = { id: `w-${Date.now()}`, is_primary: false, ...body, address: body.address.trim(), network: body.network || 'Ethereum' }
     if (wallet.is_primary) {
       for (const w of list) w.is_primary = false
     }
@@ -548,7 +548,7 @@ export const handlers = [
   http.patch('/api/auth/wallets/:id', async ({ request, params }) => {
     const userId = getUserId(request)
     if (!userId) return new HttpResponse(null, { status: 401 })
-    const body = (await request.json()) as any
+    const body = (await request.json()) as { address?: string; network?: string; is_primary?: boolean; label?: string }
     if (body.address !== undefined && (typeof body.address !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(body.address.trim()))) {
       return HttpResponse.json({ message: 'Endereço de carteira inválido' }, { status: 400 })
     }
@@ -563,7 +563,7 @@ export const handlers = [
 
   // Test-control helpers (mock/demo determinism)
   http.post('/api/__test/control', async ({ request }) => {
-    const body = (await request.json().catch(() => ({}))) as any
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
     if (Object.prototype.hasOwnProperty.call(body, 'auth401')) testControls.auth401 = !!body.auth401
     if (typeof body.nftGetFail === 'number') testControls.nftGetFail = body.nftGetFail
     if (body.nftListDelayBySearch && typeof body.nftListDelayBySearch === 'object') {
@@ -614,12 +614,12 @@ export const handlers = [
     return HttpResponse.json({ ok: true, disconnected: disconnectSocketClients() })
   }),
   http.post('/api/__test/nft-update', async ({ request }) => {
-    const body = (await request.json().catch(() => ({}))) as any
-    const nft = NFTS.find((n) => n.id === body.id)
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const nft = NFTS.find((n) => n.id === (body.id as string))
     if (!nft) return HttpResponse.json({ ok: false, error: 'not_found' }, { status: 404 })
     if (typeof body.price === 'string') nft.price = body.price
     if (typeof body.availability === 'number') nft.availability = body.availability
-    nft.updated_at = body.updated_at || new Date().toISOString()
+    nft.updated_at = (body.updated_at as string) || new Date().toISOString()
     nft.version = typeof body.version === 'number' ? body.version : (nft.version || 1) + 1
     const payload = {
       id: nft.id,
@@ -633,10 +633,10 @@ export const handlers = [
     return HttpResponse.json({ ok: true, payload })
   }),
   http.post('/api/__test/order-event', async ({ request }) => {
-    const body = (await request.json().catch(() => ({}))) as any
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
     const orderId = body.orderId || body.id
     const existing = orderId ? orders.get(String(orderId)) : undefined
-    const userId = (existing as any)?.user_id
+    const userId = (existing as { user_id?: string } | undefined)?.user_id
     const payload = {
       orderId,
       ...(userId ? { userId } : {}),
@@ -646,9 +646,9 @@ export const handlers = [
       ...(body.extra || {}),
     }
     if (existing && body.mutate !== false) {
-      ;(existing as any).status = payload.status
-      ;(existing as any).updated_at = payload.updated_at
-      orders.set(String(payload.orderId), existing)
+      ;(existing as { status?: string }).status = payload.status as string
+      ;(existing as { updated_at?: string }).updated_at = payload.updated_at as string
+      orders.set(String(payload.orderId as string), existing)
     }
     if (userId) emitToUser(userId, 'order.updated', payload)
     return HttpResponse.json({ ok: true, payload })

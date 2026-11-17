@@ -49,8 +49,8 @@ function ProfilePage() {
       const res = await authApi.updateProfile({ name: data.name, email: data.email, avatar: data.avatar || undefined })
       if (token) login(token, res.data)
       toast.success('Perfil atualizado')
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'Erro ao atualizar perfil')
+    } catch (e: unknown) {
+      toast.error((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erro ao atualizar perfil')
     } finally {
       setSaving(false)
     }
@@ -61,8 +61,8 @@ function ProfilePage() {
       await authApi.changePassword(data.currentPassword, data.newPassword)
       passForm.reset()
       toast.success('Senha alterada com sucesso')
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'Erro ao alterar senha')
+    } catch (e: unknown) {
+      toast.error((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erro ao alterar senha')
     }
   })
 

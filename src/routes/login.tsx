@@ -49,7 +49,7 @@ function Login() {
       login(data.data.token, data.data.user)
       toast.success('Bem-vindo de volta!')
       const destination = returnTo || consumeResumePath() || '/'
-      navigate({ to: destination as any })
+      navigate({ to: destination as never })
     },
     onError: () => {
       toast.error('E-mail ou senha inválidos')

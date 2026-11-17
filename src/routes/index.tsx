@@ -50,9 +50,9 @@ function Home() {
   const query = useQuery({
     queryKey: ['nfts', queryUserId, { search, edition, availability, sort, order, page }],
     queryFn: ({ signal }) =>
-      nftApi.list({ search: search || undefined, edition, availability, sort, order, page, limit: 8 } as any, {
+      nftApi.list({ search: search || undefined, edition, availability, sort, order, page, limit: 8 }, {
         signal,
-      } as any),
+      }),
     placeholderData: keepPreviousData,
   })
 
@@ -63,7 +63,7 @@ function Home() {
       search: (prev) => ({
         ...prev,
         ...patch,
-        page: resetPage ? 1 : patch.page ?? (prev as any).page ?? 1,
+        page: resetPage ? 1 : patch.page ?? (prev as HomeSearch).page ?? 1,
       }),
     })
   }
@@ -170,7 +170,7 @@ function Home() {
                 <select
                   id="availability"
                   value={availability ?? ''}
-                  onChange={(e) => updateSearch({ availability: (e.target.value || undefined) as any })}
+                  onChange={(e) => updateSearch({ availability: (e.target.value || undefined) as HomeSearch['availability'] })}
                 >
                   <option value="">Todas</option>
                   <option value="available">Disponível</option>
@@ -254,7 +254,7 @@ function Home() {
                 <div className="catalog-message">
                   <h3>Nenhum NFT encontrado</h3>
                   <p>Ajuste os filtros ou a busca para ver outros resultados.</p>
-                  <Button variant="outline" className="mt-4" onClick={() => navigate({ to: '/', search: {} as any })}>
+                  <Button variant="outline" className="mt-4" onClick={() => navigate({ to: '/', search: {} })}>
                     Limpar filtros
                   </Button>
                 </div>
