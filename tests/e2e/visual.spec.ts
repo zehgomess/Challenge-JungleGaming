@@ -27,22 +27,21 @@ test('visual: payment', async ({ page }) => {
         created_at: new Date().toISOString(),
       }),
     )
-    localStorage.setItem(
-      'cart:user:user-1',
-      JSON.stringify({
-        items: [
-          {
-            nft_id: 'nft-2',
-            edition: 'Gold',
-            quantity: 1,
-            price_at_add: '0.38',
-            name: 'Crypto Jungle #2',
-            image: 'https://picsum.photos/seed/jungle-2/600/600',
-            max_availability: 2,
-          },
-        ],
-      }),
-    )
+    const seededCart = JSON.stringify({
+      items: [
+        {
+          nft_id: 'nft-2',
+          edition: 'Gold',
+          quantity: 1,
+          price_at_add: '0.38',
+          name: 'Crypto Jungle #2',
+          image: '/artworks/violet-nomad-314.webp',
+          max_availability: 2,
+        },
+      ],
+    })
+    localStorage.setItem('cart:visitor', seededCart)
+    localStorage.setItem('cart:user:user-1', seededCart)
   })
   await page.goto('/payment')
   await page.waitForTimeout(1500)

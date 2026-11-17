@@ -49,7 +49,10 @@ const NFTS: Array<NFT & { version: number }> = Array.from({ length: 24 }).map((_
     id: `nft-${i + 1}`,
     name: `Crypto Jungle #${i + 1}`,
     description: `Colecionável da série Jungle (${edition}) com raridade e utilidade no ecossistema.`,
-    image: createNftArtwork(i + 1),
+    image:
+      i < 4
+        ? `/artworks/${['emerald-ape-042', 'violet-nomad-314', 'ivory-baron-008', 'golden-beat-207'][i]}.webp`
+        : createNftArtwork(i + 1),
     edition,
     price,
     availability,

@@ -66,6 +66,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('session-expired', handleSessionExpired)
   }, [])
 
+  // Detect a session that was cleared outside the app (another tab, devtools or
+  // a stale token removal) and route through the same expiry flow, preserving
+  // the current location so the user can resume after signing in again.
+  useEffect(() => {
+    if (!token || !user) return
+    const interval = window.setInterval(() => {
+      const stored = readStoredSession()
+      if (!stored.token || !stored.user) {
+        window.dispatchEvent(
+          new CustomEvent('session-expired', {
+            detail: {
+              returnTo: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+            },
+          }),
+        )
+      }
+    }, 750)
+    return () => window.clearInterval(interval)
+  }, [token, user])
+
   const login = (t: string, u: User) => {
     const previousUserId = user?.id ?? readStoredSession().user?.id
     // Treat every successful login as an auth boundary, including a fresh
