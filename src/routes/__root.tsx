@@ -1,4 +1,5 @@
-import { Outlet, createRootRoute } from '@tanstack/react-router'
+import { Outlet, createRootRoute, useLocation } from '@tanstack/react-router'
+import { useEffect, useRef } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from '@/store/query'
 import { NavBar } from '@/components/navbar'
@@ -12,6 +13,12 @@ export const Route = createRootRoute({
 })
 
 function RootComponent() {
+  const location = useLocation()
+  const mainRef = useRef<HTMLElement | null>(null)
+  useEffect(() => {
+    mainRef.current?.focus({ preventScroll: true })
+  }, [location.pathname])
+
   return (
     <QueryClientProvider client={queryClient}>
       <SessionProvider>
@@ -21,7 +28,7 @@ function RootComponent() {
               Pular para o conteudo principal
             </a>
             <NavBar />
-            <main id="main-content" className="flex-grow" tabIndex={-1}>
+            <main id="main-content" ref={mainRef} className="flex-grow" tabIndex={-1}>
               <Outlet />
             </main>
             <Sonner position="top-right" />
