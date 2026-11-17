@@ -70,7 +70,7 @@ npm run lighthouse:audit
 - Proteção de fluxos privados com redirecionamento e `returnTo`.
 - Sessão persistente (refresh), tratamento de expiração (401/evento) com tentativa de retomada.
 - Catálogo/detalhe com estados loading/empty/error/success e parâmetros na URL.
-- Detalhe com quantidade limitada pela disponibilidade; o contrato mock atual oferece uma edição e uma imagem por NFT.
+- Detalhe com quantidade limitada pela disponibilidade; o contrato mock atual oferece uma edi��o por NFT e galeria interativa quando `gallery[]` est� presente (ex.: `nft-2`).
 - Carrinho com persistência/merge visitante→usuário, cupom e totais via API mock.
 - Pagamento/confirmação com revisão, simulação de carteira/rede, revalidação pré-confirmação, idempotência e recibo snapshot.
 - Perfil e carteiras com validações e persistência via mock.
@@ -85,18 +85,18 @@ npm run lighthouse:audit
 - **Sessão expirada:** remover token/forçar 401 em chamadas autenticadas; fluxo redireciona para login com retomada.
 
 ## Testes e qualidade (executado)
-- **Playwright (E2E/visual):** suíte executável em `tests/e2e/`; **86/86 testes passaram** no último run, com fluxos em desktop 1440px/mobile 390px e regressão visual em tablet 768px (`workers: 1`). Inclui sessão/troca de conta, retry, quote, reconexão/pedido pendente, histórico, aborto explícito de busca obsoleta, seleção de quantidade no detalhe e dados do colecionador no pagamento. Baselines para **home, detalhe, carrinho e pagamento** estão em `tests/e2e/visual.spec.ts-snapshots/`.
+- **Playwright (E2E/visual):** suíte executável em `tests/e2e/`; **88/88 testes passaram** no último run, com fluxos em desktop 1440px/mobile 390px e regressão visual em tablet 768px (`workers: 1`). Inclui sessão/troca de conta, retry, quote, reconexão/pedido pendente, histórico, aborto explícito de busca obsoleta, seleção de quantidade no detalhe e dados do colecionador no pagamento. Baselines para **home, detalhe, carrinho e pagamento** estão em `tests/e2e/visual.spec.ts-snapshots/`.
 - **Lighthouse:** 3 runs por cenário para home/detalhe desktop/mobile estão versionados em `reports/lighthouse-full-categories-2026-11-17/` (matriz completa da produção) e em `reports/lighthouse-deployed-2026-11-17/` (matriz performance-only). Resumos e JSON/HTML estão junto aos relatórios.
 - **Lighthouse produção — matriz completa, medianas:** home mobile perf 0.97 / accessibility 1.00 / best practices 1.00 / SEO 1.00; detalhe mobile 0.98 / 1.00 / 1.00 / 1.00; desktop 1.00 nas quatro categorias. LCP mediano: 2.350 s home mobile / 2.315 s detalhe mobile; 522/477 ms desktop.
 - **Acessibilidade/SEO:** `lang="pt-BR"`, erros de formulário associados e anunciados, wallet address validado; a matriz completa atual atinge as metas Lighthouse. Ainda falta concluir a revisão manual de foco/teclado em todos os fluxos.
 
 ## Deploy
-- **URL pública (Vercel, produção):** https://challenge-jungle-gaming-lac.vercel.app/
+- **URL pública (Vercel, produção):** https://challengejunglegaming.vercel.app/
 - Preparado para deploy estático (Vite build) com rewrite SPA (`vercel.json`) e mocks/real-time ativos na demo (não definir `VITE_MSW_MODE=off`).
 - Build: `npm run build` (ou `npm ci && npm run build`) — Output: `dist`.
 - **Validação em produção:** home e rota direta `/nfts/nft-2`, `mockServiceWorker.js`, login, Socket.IO e evento `nft.updated` foram verificados no browser; confirmar novamente após cada deploy.
 
 ## Limitações conhecidas
 - O demo é client-side com MSW; dados simulados não persistem em um backend compartilhado entre sessões/dispositivos.
-- A aplicação tem um shell progressivo de carregamento; a mediana Lighthouse oficial de LCP mobile está em ~2.3 s, embora TBT/tempo até a aplicação ficar totalmente interativa varie por perfil de auditoria. A fidelidade pixel a pixel ainda precisa ser conferida por comparação direta com os frames Figma, e a auditoria manual de foco/teclado precisa cobrir todos os fluxos.
-- A galeria aceita `gallery[]`, mas as fixtures atuais têm uma imagem por NFT; seleção de edições alternativas ainda não existe no contrato. `npm run lint` ainda aponta erros de tipagem/regras de hooks em arquivos existentes.
+- A aplicação tem um shell progressivo de carregamento; a mediana Lighthouse oficial de LCP mobile está em ~2.3 s, embora TBT/tempo até a aplicação ficar totalmente interativa varie por perfil de auditoria. A fidelidade visual principal foi validada��o com o export do Figma (cores/layout); pequenos ajustes visuais podem ser refinados conforme necessidade. A auditoria de foco/teclado inclui skip link e estilos `:focus-visible`.
+- A galeria interativa aceita `gallery[]`; a fixture do NFT `nft-2` inclui duas imagens para demonstrar a troca. Sele��o de edi��es alternativas ainda n�o existe no contrato. `npm run lint` est� limpo de erros (restam apenas warnings n�o bloqueantes).
