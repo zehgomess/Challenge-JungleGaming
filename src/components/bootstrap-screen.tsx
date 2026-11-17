@@ -1,6 +1,12 @@
 import { Skeleton } from '@/components/ui/skeleton'
 
 const previewArtwork = '/artworks/emerald-ape-042.webp'
+const detailArtworks: Record<string, string> = {
+  'nft-1': previewArtwork,
+  'nft-2': '/artworks/violet-nomad-314.webp',
+  'nft-3': '/artworks/ivory-baron-008.webp',
+  'nft-4': '/artworks/golden-beat-207.webp',
+}
 
 function Brand() {
   return (
@@ -107,8 +113,58 @@ function HomeBootstrapScreen() {
   )
 }
 
+function DetailBootstrapScreen({ artwork }: { artwork?: string }) {
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="site-header" aria-hidden="true">
+        <div className="site-header-inner"><Brand /></div>
+      </header>
+      <main className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6" aria-busy="true">
+        <span className="text-sm text-muted-foreground">← Voltar ao catálogo</span>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <div className="aspect-square bg-muted rounded-lg overflow-hidden">
+              {artwork
+                ? <img src={artwork} alt="" width={600} height={600} fetchPriority="high" decoding="async" className="w-full h-full object-cover" />
+                : <Skeleton className="w-full h-full" />}
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <Skeleton key={index} className="aspect-square w-full" />
+              ))}
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <Skeleton className="h-8 w-2/3" />
+              <Skeleton className="h-10 w-24" />
+            </div>
+            <Skeleton className="h-16 w-full" />
+            <div className="flex gap-2">
+              <Skeleton className="h-7 w-24" />
+              <Skeleton className="h-7 w-28" />
+              <Skeleton className="h-7 w-20" />
+            </div>
+            <Skeleton className="h-48 w-full rounded-lg" />
+            <div className="flex gap-3">
+              <Skeleton className="h-10 flex-1" />
+              <Skeleton className="h-10 w-36" />
+            </div>
+          </div>
+        </div>
+        <span className="sr-only" role="status">Carregando os detalhes do NFT</span>
+      </main>
+    </div>
+  )
+}
+
 export function BootstrapScreen() {
-  if (window.location.pathname === '/') return <HomeBootstrapScreen />
+  const path = window.location.pathname
+  if (path === '/') return <HomeBootstrapScreen />
+  if (path.startsWith('/nfts/')) {
+    const nftId = path.split('/').filter(Boolean).at(-1) ?? ''
+    return <DetailBootstrapScreen artwork={detailArtworks[nftId]} />
+  }
 
   return (
     <main className="bootstrap-route" role="status" aria-live="polite">

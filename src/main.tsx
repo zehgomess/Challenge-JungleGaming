@@ -1,15 +1,17 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { BootstrapScreen } from '@/components/bootstrap-screen'
 
 async function createAppRouter() {
-  const { routeTree } = await import('./routeTree.gen')
-  return createRouter({ routeTree })
+  const [{ createRouter, RouterProvider }, { routeTree }] = await Promise.all([
+    import('@tanstack/react-router'),
+    import('./routeTree.gen'),
+  ])
+  return { router: createRouter({ routeTree }), RouterProvider }
 }
 
-type AppRouter = Awaited<ReturnType<typeof createAppRouter>>
+type AppRouter = Awaited<ReturnType<typeof createAppRouter>>['router']
 
 declare module '@tanstack/react-router' {
   interface Register {
@@ -25,11 +27,11 @@ async function bootstrap() {
     </StrictMode>,
   )
 
-  // Show the first-paint shell while MSW and routes initialize. Keep startup
-  // serial here: the Socket.IO mock must be active before the route tree mounts.
+  // Do not load the route tree until MSW is active: parallel route startup can
+  // race the custom Socket.IO WebSocket handler before it controls the page.
   const mocks = await import('./mocks/browser')
   await mocks.enableMocking()
-  const router = await createAppRouter()
+  const { router, RouterProvider } = await createAppRouter()
   root.render(
     <StrictMode>
       <RouterProvider router={router} />
